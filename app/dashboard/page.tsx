@@ -4,6 +4,7 @@ import { Activity, Banknote, Clock3, ListChecks, Scale, TrendingUp } from "lucid
 import { ActivityHeatmap } from "@/components/charts/ActivityHeatmap";
 import { AnalyticsCharts } from "@/components/charts/AnalyticsCharts";
 import { MetricCard } from "@/components/dashboard/MetricCard";
+import { SymbolIntelligence } from "@/components/dashboard/SymbolIntelligence";
 import { SessionGate } from "@/components/session/SessionGate";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
@@ -25,7 +26,7 @@ export default function DashboardPage() {
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <Badge tone="cyan">Session expires {new Date(session.expiresAt).toLocaleString()}</Badge>
-          <h1 className="mt-3 text-3xl font-semibold text-white">Trading dashboard</h1>
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white">Trading command center</h1>
           <p className="mt-2 text-sm text-slate-400">Temporary Binance Spot analysis with no stored API secret.</p>
         </div>
         <Badge tone={analytics.pnlEstimate.confidence === "none" ? "slate" : "amber"}>
@@ -45,6 +46,44 @@ export default function DashboardPage() {
         <MetricCard label="Quote fees" value={formatNumber(analytics.quoteFeeEstimate)} detail={analytics.feesByAsset.map((fee) => `${formatNumber(fee.amount)} ${fee.asset}`).join(", ")} icon={<Banknote className="h-4 w-4" />} />
         <MetricCard label="Buy ratio" value={formatPercent(analytics.buySell.buyRatio)} detail={`${analytics.buySell.buys} buys / ${analytics.buySell.sells} sells`} icon={<Scale className="h-4 w-4" />} />
       </section>
+
+      <Card className="overflow-hidden border-cyan-400/20">
+        <CardContent className="grid gap-5 p-0 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="p-6">
+            <Badge tone="cyan">Behavior snapshot</Badge>
+            <h2 className="mt-4 text-2xl font-semibold text-white">Your activity is concentrated across {analytics.symbolSummaries.length} symbols.</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+              This view combines symbol coverage, timing pressure, fee drag, and estimated PnL confidence into a review surface for post-trade discipline.
+            </p>
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-md border border-slate-800 bg-slate-900 p-4">
+                <p className="text-xs text-slate-500">Rapid follow-ups</p>
+                <p className="numeric mt-2 text-2xl font-semibold text-white">{analytics.rapidTradeCount}</p>
+              </div>
+              <div className="rounded-md border border-slate-800 bg-slate-900 p-4">
+                <p className="text-xs text-slate-500">Late-night ratio</p>
+                <p className="numeric mt-2 text-2xl font-semibold text-white">{formatPercent(lateNightRatio)}</p>
+              </div>
+              <div className="rounded-md border border-slate-800 bg-slate-900 p-4">
+                <p className="text-xs text-slate-500">Est. realized PnL</p>
+                <p className="numeric mt-2 text-2xl font-semibold text-white">{formatNumber(analytics.pnlEstimate.realized)}</p>
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-slate-800 bg-slate-950/80 p-6 lg:border-l lg:border-t-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Top insights</p>
+            <div className="mt-4 space-y-3">
+              {analytics.generatedInsights.slice(0, 3).map((insight) => (
+                <div key={insight.id} className="rounded-md border border-slate-800 bg-slate-900 p-3">
+                  <Badge tone={insight.severity === "risk" ? "rose" : insight.severity === "warning" ? "amber" : "slate"}>{insight.severity}</Badge>
+                  <p className="mt-2 text-sm font-semibold text-white">{insight.title}</p>
+                  <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-400">{insight.message}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <section className="grid gap-4 lg:grid-cols-3">
         <Card>
@@ -84,6 +123,7 @@ export default function DashboardPage() {
         </Card>
       </section>
 
+      <SymbolIntelligence analytics={analytics} trades={session.trades} />
       <AnalyticsCharts analytics={analytics} />
       <ActivityHeatmap analytics={analytics} />
     </div>

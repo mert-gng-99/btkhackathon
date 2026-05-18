@@ -1,9 +1,4 @@
-export interface BinancePermissionShape {
-  canTrade?: boolean;
-  canWithdraw?: boolean;
-  canDeposit?: boolean;
-  permissions?: string[];
-}
+import type { BinanceApiRestrictionsResponse } from "@/lib/binance/binanceTypes";
 
 export interface ReadOnlyValidation {
   isReadOnly: boolean;
@@ -11,20 +6,34 @@ export interface ReadOnlyValidation {
   warnings: string[];
 }
 
-export function validateReadOnlyPermissions(account: BinancePermissionShape): ReadOnlyValidation {
+export function validateReadOnlyPermissions(restrictions: BinanceApiRestrictionsResponse): ReadOnlyValidation {
   const blockers: string[] = [];
   const warnings: string[] = [];
 
-  if (account.canTrade === true) {
-    blockers.push("This API key appears to allow trading. Create a Binance API key with trading disabled.");
+  if (restrictions.enableReading !== true) {
+    blockers.push("Enable Reading must be enabled for read-only trade analysis.");
   }
 
-  if (account.canWithdraw === true) {
-    blockers.push("This API key appears to allow withdrawals. Withdrawal permission must be disabled.");
+  const riskyFlags: Array<[keyof BinanceApiRestrictionsResponse, string]> = [
+    ["enableSpotAndMarginTrading", "Spot & Margin Trading"],
+    ["enableWithdrawals", "Withdrawals"],
+    ["enableInternalTransfer", "Internal Transfer"],
+    ["permitsUniversalTransfer", "Universal Transfer"],
+    ["enableMargin", "Margin"],
+    ["enableFutures", "Futures"],
+    ["enableVanillaOptions", "Vanilla Options"],
+    ["enableFixApiTrade", "FIX API Trade"],
+    ["enablePortfolioMarginTrading", "Portfolio Margin Trading"]
+  ];
+
+  for (const [flag, label] of riskyFlags) {
+    if (restrictions[flag] === true) {
+      blockers.push(`${label} permission is enabled. Disable it and keep only Enable Reading for this app.`);
+    }
   }
 
-  if (!Array.isArray(account.permissions)) {
-    warnings.push("Binance did not return a detailed permissions list. The app still blocks trading and withdrawal flags when visible.");
+  if (restrictions.ipRestrict === false) {
+    warnings.push("This API key is not restricted to trusted IPs. Read-only analysis can continue, but IP restriction is safer when you deploy.");
   }
 
   return {
@@ -33,4 +42,3 @@ export function validateReadOnlyPermissions(account: BinancePermissionShape): Re
     warnings
   };
 }
-

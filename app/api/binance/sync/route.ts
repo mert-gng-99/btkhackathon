@@ -11,6 +11,8 @@ const BodySchema = z.object({
   apiKey: z.string().min(10),
   apiSecret: z.string().min(10),
   symbols: z.array(z.string().min(3)).max(30).optional(),
+  quoteAssets: z.array(z.string().min(2)).max(20).optional(),
+  scanMode: z.enum(["selected", "quoteAssets", "all"]).optional(),
   startTime: z.number().int().positive().optional(),
   endTime: z.number().int().positive().optional()
 });
@@ -36,7 +38,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const symbols = parsed.data.symbols?.length ? parsed.data.symbols : BinanceService.getDefaultSymbols();
+    const scanMode = parsed.data.scanMode ?? "quoteAssets";
+    const symbols = await service.discoverTradeSymbols({
+      mode: scanMode,
+      selectedSymbols: parsed.data.symbols,
+      quoteAssets: parsed.data.quoteAssets
+    });
     const results = await service.fetchTradesForSymbols(symbols, {
       startTime: parsed.data.startTime ?? defaultStartTime(),
       endTime: parsed.data.endTime,
@@ -57,6 +64,11 @@ export async function POST(request: Request) {
       sessionId: session.id,
       analytics: session.analytics,
       warnings: session.warnings,
+      scan: {
+        mode: scanMode,
+        discoveredSymbols: symbols.length,
+        symbolsWithTrades: results.filter((result) => result.trades.length > 0).length
+      },
       fetchedSymbols: results.map((result) => ({
         symbol: result.symbol,
         trades: result.trades.length,
@@ -75,4 +87,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: status === 500 ? 500 : 400 });
   }
 }
-

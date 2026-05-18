@@ -2,29 +2,87 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, FlaskConical, KeyRound, Loader2, ShieldCheck } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  DatabaseZap,
+  FlaskConical,
+  Gauge,
+  KeyRound,
+  Layers3,
+  Loader2,
+  Radar,
+  ShieldCheck,
+  Sparkles
+} from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { cn } from "@/lib/utils/cn";
 
 const COMMON_SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT", "DOGEUSDT", "AVAXUSDT"];
+const QUOTE_ASSETS = ["USDT", "USDC", "FDUSD", "BTC", "ETH", "BNB", "TRY", "EUR", "TUSD", "BUSD"];
+
+type ScanMode = "selected" | "quoteAssets" | "all";
+
+const SCAN_MODES: Array<{
+  id: ScanMode;
+  title: string;
+  detail: string;
+  meta: string;
+  icon: typeof Gauge;
+}> = [
+  {
+    id: "all",
+    title: "Full market scan",
+    detail: "Scans every active Binance Spot symbol from exchangeInfo. Slowest, best coverage.",
+    meta: "Best for complete history",
+    icon: Radar
+  },
+  {
+    id: "quoteAssets",
+    title: "Broad quote scan",
+    detail: "Scans symbols that end with selected quote assets such as USDT, BTC, BNB, and TRY.",
+    meta: "Balanced coverage",
+    icon: Layers3
+  },
+  {
+    id: "selected",
+    title: "Quick selected scan",
+    detail: "Scans only the symbols you pick below. Fast, but can miss past trades.",
+    meta: "Fastest",
+    icon: Gauge
+  }
+];
 
 export default function ConnectPage() {
   const router = useRouter();
   const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
   const [selectedSymbols, setSelectedSymbols] = useState(COMMON_SYMBOLS.slice(0, 5));
-  const [lookbackDays, setLookbackDays] = useState(365);
+  const [quoteAssets, setQuoteAssets] = useState(QUOTE_ASSETS.slice(0, 8));
+  const [scanMode, setScanMode] = useState<ScanMode>("all");
+  const [lookbackDays, setLookbackDays] = useState(3650);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
   const startTime = useMemo(() => Date.now() - lookbackDays * 24 * 60 * 60 * 1000, [lookbackDays]);
+  const loadingCopy =
+    scanMode === "all"
+      ? "Full market scan is running. This can take a few minutes because Binance requires symbol-by-symbol trade queries."
+      : scanMode === "quoteAssets"
+        ? "Broad quote scan is running across discovered Spot symbols."
+        : "Selected symbols are being scanned.";
 
   function toggleSymbol(symbol: string) {
     setSelectedSymbols((current) => (current.includes(symbol) ? current.filter((item) => item !== symbol) : [...current, symbol]));
+  }
+
+  function toggleQuoteAsset(asset: string) {
+    setQuoteAssets((current) => (current.includes(asset) ? current.filter((item) => item !== asset) : [...current, asset]));
   }
 
   async function validateOnly() {
@@ -47,7 +105,7 @@ export default function ConnectPage() {
         throw new Error(payload.validation.blockers.join(" "));
       }
       setWarnings(payload.validation.warnings ?? []);
-      setStatus("Credentials are valid and no trading or withdrawal permission was detected.");
+      setStatus(`Read-only permission confirmed. Enabled permissions: ${payload.validation.permissions.join(", ") || "Reading"}.`);
     } catch (validateError: unknown) {
       setError(validateError instanceof Error ? validateError.message : "Validation failed.");
     } finally {
@@ -58,7 +116,7 @@ export default function ConnectPage() {
   async function syncTrades() {
     setLoading(true);
     setError(null);
-    setStatus(null);
+    setStatus(loadingCopy);
     setWarnings([]);
 
     try {
@@ -68,6 +126,8 @@ export default function ConnectPage() {
         body: JSON.stringify({
           apiKey,
           apiSecret,
+          scanMode,
+          quoteAssets,
           symbols: selectedSymbols,
           startTime
         })
@@ -109,129 +169,212 @@ export default function ConnectPage() {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-      <section className="space-y-5">
-        <Badge tone="amber">Temporary session mode</Badge>
-        <div>
-          <h1 className="text-3xl font-semibold text-white">Connect Binance safely</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
-            Create a Binance API key with read-only access. Disable trading, withdrawals, transfers, and any permission that can modify your account.
-          </p>
-        </div>
+    <div className="space-y-8">
+      <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="space-y-5">
+          <Badge tone="amber">Temporary session mode</Badge>
+          <div>
+            <h1 className="text-4xl font-semibold tracking-tight text-white">Connect Binance safely</h1>
+            <p className="mt-3 max-w-2xl text-base leading-7 text-slate-300">
+              Use a read-only Binance key to scan Spot trade history. For full coverage, the app discovers active Spot symbols and queries them one by one because Binance does not provide a global all-trades endpoint.
+            </p>
+          </div>
 
-        <Card>
-          <CardHeader>
-            <h2 className="text-base font-semibold text-white">Security rules enforced by this app</h2>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm leading-6 text-slate-300">
+          <div className="grid gap-3 sm:grid-cols-3">
             {[
-              "The secret is submitted only to backend API routes.",
-              "The MVP does not store API keys or secrets.",
-              "The backend rejects keys that appear to allow trading or withdrawals.",
-              "The codebase contains no Binance order placement, withdrawal, transfer, or modifying endpoint."
-            ].map((item) => (
-              <div key={item} className="flex gap-3">
-                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />
-                <span>{item}</span>
+              ["Secret storage", "Not stored", ShieldCheck],
+              ["Write actions", "Not implemented", DatabaseZap],
+              ["Coverage", scanMode === "all" ? "Full scan" : scanMode === "quoteAssets" ? "Broad scan" : "Selected", Radar]
+            ].map(([label, value, Icon]) => (
+              <div key={label as string} className="rounded-lg border border-slate-800 bg-slate-950/70 p-4">
+                <Icon className="h-5 w-5 text-cyan-200" aria-hidden="true" />
+                <p className="mt-4 text-xs uppercase tracking-wide text-slate-500">{label as string}</p>
+                <p className="mt-1 text-sm font-semibold text-white">{value as string}</p>
               </div>
             ))}
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card className="border-amber-400/25 bg-amber-400/10">
-          <CardContent className="flex gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-200" aria-hidden="true" />
-            <p className="text-sm leading-6 text-amber-100">
-              Never paste a Binance key with trading or withdrawal permissions. Delete and recreate the key if you are unsure.
-            </p>
+          <Card>
+            <CardHeader>
+              <h2 className="text-base font-semibold text-white">Security rules enforced by this app</h2>
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm leading-6 text-slate-300">
+              {[
+                "The secret is submitted only to backend API routes.",
+                "The MVP does not store API keys or secrets.",
+                "The backend checks Binance API restrictions and requires reading-only access.",
+                "No Binance order placement, withdrawal, transfer, or modifying endpoint exists in the codebase."
+              ].map((item) => (
+                <div key={item} className="flex gap-3">
+                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />
+                  <span>{item}</span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className="border-amber-400/25 bg-amber-400/10">
+            <CardContent className="flex gap-3">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-200" aria-hidden="true" />
+              <p className="text-sm leading-6 text-amber-100">
+                Full coverage is slower because Binance requires `symbol` for account trade history. Keep the browser open while the scan runs.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="overflow-hidden">
+          <CardHeader className="bg-slate-900/70">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-xl font-semibold text-white">Analyze once without saving keys</h2>
+                <p className="mt-1 text-sm text-slate-500">Full scan mode is selected by default for maximum trade coverage.</p>
+              </div>
+              <KeyRound className="h-6 w-6 text-cyan-200" aria-hidden="true" />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid gap-4 md:grid-cols-2">
+              <Input label="Binance API key" value={apiKey} onChange={(event) => setApiKey(event.target.value)} autoComplete="off" />
+              <Input
+                label="Binance API secret"
+                type="password"
+                value={apiSecret}
+                onChange={(event) => setApiSecret(event.target.value)}
+                autoComplete="off"
+                hint="Never returned to the frontend after submission."
+              />
+            </div>
+
+            <Input
+              label="Lookback days"
+              type="number"
+              min={7}
+              max={3650}
+              value={lookbackDays}
+              onChange={(event) => setLookbackDays(Number(event.target.value))}
+              hint="3650 days covers roughly 10 years of Spot history."
+            />
+
+            <div>
+              <p className="mb-3 text-sm font-medium text-slate-200">Scan coverage</p>
+              <div className="grid gap-3 lg:grid-cols-3">
+                {SCAN_MODES.map((mode) => {
+                  const Icon = mode.icon;
+                  const selected = scanMode === mode.id;
+                  return (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      onClick={() => setScanMode(mode.id)}
+                      className={cn(
+                        "cursor-pointer rounded-lg border p-4 text-left transition-colors duration-200",
+                        selected
+                          ? "border-cyan-400/60 bg-cyan-400/10 text-white"
+                          : "border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-600 hover:text-white"
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <Icon className={cn("h-5 w-5", selected ? "text-cyan-200" : "text-slate-500")} aria-hidden="true" />
+                        <span className={cn("rounded-md px-2 py-1 text-[11px] font-semibold", selected ? "bg-cyan-400/15 text-cyan-100" : "bg-slate-900 text-slate-500")}>
+                          {mode.meta}
+                        </span>
+                      </div>
+                      <p className="mt-4 text-sm font-semibold">{mode.title}</p>
+                      <p className="mt-2 text-xs leading-5 text-slate-500">{mode.detail}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid gap-4 xl:grid-cols-2">
+              <div>
+                <p className="mb-2 text-sm font-medium text-slate-200">Quote assets for broad scan</p>
+                <div className="flex flex-wrap gap-2">
+                  {QUOTE_ASSETS.map((asset) => {
+                    const selected = quoteAssets.includes(asset);
+                    return (
+                      <button
+                        key={asset}
+                        type="button"
+                        onClick={() => toggleQuoteAsset(asset)}
+                        className={cn(
+                          "cursor-pointer rounded-md border px-3 py-2 text-xs font-medium transition-colors duration-200",
+                          selected
+                            ? "border-amber-400/50 bg-amber-400/10 text-amber-100"
+                            : "border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-500 hover:text-white"
+                        )}
+                      >
+                        {asset}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-2 text-sm font-medium text-slate-200">Priority symbols</p>
+                <div className="flex flex-wrap gap-2">
+                  {COMMON_SYMBOLS.map((symbol) => {
+                    const selected = selectedSymbols.includes(symbol);
+                    return (
+                      <button
+                        key={symbol}
+                        type="button"
+                        onClick={() => toggleSymbol(symbol)}
+                        className={cn(
+                          "cursor-pointer rounded-md border px-3 py-2 text-xs font-medium transition-colors duration-200",
+                          selected
+                            ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-100"
+                            : "border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-500 hover:text-white"
+                        )}
+                      >
+                        {symbol}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="flex items-start gap-3 rounded-md border border-cyan-400/25 bg-cyan-400/10 p-3 text-sm text-cyan-100">
+                <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
+                <span>{loadingCopy}</span>
+              </div>
+            ) : null}
+            {error ? <div className="rounded-md border border-rose-400/30 bg-rose-400/10 p-3 text-sm text-rose-100">{error}</div> : null}
+            {status && !loading ? (
+              <div className="flex items-center gap-2 rounded-md border border-emerald-400/30 bg-emerald-400/10 p-3 text-sm text-emerald-100">
+                <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                {status}
+              </div>
+            ) : null}
+            {warnings.map((warning) => (
+              <div key={warning} className="rounded-md border border-amber-400/30 bg-amber-400/10 p-3 text-sm text-amber-100">
+                {warning}
+              </div>
+            ))}
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Button type="button" variant="secondary" onClick={validateOnly} disabled={loading || !apiKey || !apiSecret}>
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <ShieldCheck className="h-4 w-4" aria-hidden="true" />}
+                Validate
+              </Button>
+              <Button type="button" onClick={syncTrades} disabled={loading || !apiKey || !apiSecret || (scanMode === "selected" && selectedSymbols.length === 0)}>
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Sparkles className="h-4 w-4" aria-hidden="true" />}
+                Analyze
+              </Button>
+              <Button type="button" variant="ghost" onClick={loadDemo} disabled={loading}>
+                <FlaskConical className="h-4 w-4" aria-hidden="true" />
+                Demo
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </section>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold text-white">Analyze once without saving keys</h2>
-              <p className="mt-1 text-sm text-slate-500">Spot trades are fetched per selected symbol.</p>
-            </div>
-            <KeyRound className="h-5 w-5 text-cyan-200" aria-hidden="true" />
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <Input label="Binance API key" value={apiKey} onChange={(event) => setApiKey(event.target.value)} autoComplete="off" />
-          <Input
-            label="Binance API secret"
-            type="password"
-            value={apiSecret}
-            onChange={(event) => setApiSecret(event.target.value)}
-            autoComplete="off"
-            hint="This value is never sent back to the frontend after submission."
-          />
-
-          <Input
-            label="Lookback days"
-            type="number"
-            min={7}
-            max={3650}
-            value={lookbackDays}
-            onChange={(event) => setLookbackDays(Number(event.target.value))}
-          />
-
-          <div>
-            <p className="mb-2 text-sm font-medium text-slate-200">Symbols to scan</p>
-            <div className="flex flex-wrap gap-2">
-              {COMMON_SYMBOLS.map((symbol) => {
-                const selected = selectedSymbols.includes(symbol);
-                return (
-                  <button
-                    key={symbol}
-                    type="button"
-                    onClick={() => toggleSymbol(symbol)}
-                    className={`cursor-pointer rounded-md border px-3 py-2 text-xs font-medium transition-colors duration-200 ${
-                      selected
-                        ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-100"
-                        : "border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-500 hover:text-white"
-                    }`}
-                  >
-                    {symbol}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {error ? (
-            <div className="rounded-md border border-rose-400/30 bg-rose-400/10 p-3 text-sm text-rose-100">{error}</div>
-          ) : null}
-          {status ? (
-            <div className="flex items-center gap-2 rounded-md border border-emerald-400/30 bg-emerald-400/10 p-3 text-sm text-emerald-100">
-              <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-              {status}
-            </div>
-          ) : null}
-          {warnings.map((warning) => (
-            <div key={warning} className="rounded-md border border-amber-400/30 bg-amber-400/10 p-3 text-sm text-amber-100">
-              {warning}
-            </div>
-          ))}
-
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Button type="button" variant="secondary" onClick={validateOnly} disabled={loading || !apiKey || !apiSecret}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <ShieldCheck className="h-4 w-4" aria-hidden="true" />}
-              Validate
-            </Button>
-            <Button type="button" onClick={syncTrades} disabled={loading || !apiKey || !apiSecret || selectedSymbols.length === 0}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <KeyRound className="h-4 w-4" aria-hidden="true" />}
-              Analyze
-            </Button>
-            <Button type="button" variant="ghost" onClick={loadDemo} disabled={loading}>
-              <FlaskConical className="h-4 w-4" aria-hidden="true" />
-              Demo
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
+
