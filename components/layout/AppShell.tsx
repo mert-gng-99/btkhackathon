@@ -18,6 +18,10 @@ const navItems = [
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
+  if (pathname === "/") {
+    return <>{children}</>;
+  }
+
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/82 backdrop-blur">
