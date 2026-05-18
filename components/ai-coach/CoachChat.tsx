@@ -484,8 +484,11 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
 
                 {message.answer?.evidence.length ? (
                   <div className="mt-3 grid gap-2">
-                    {message.answer.evidence.slice(0, 4).map((item) => (
-                      <div key={`${item.sourceRef}-${item.title}`} className="rounded-md border border-cyan-400/20 bg-cyan-400/10 p-3">
+                    {message.answer.evidence.slice(0, 4).map((item, evidenceIndex) => (
+                      <div
+                        key={`${message.role}-${index}-${item.sourceRef}-${item.title}-${evidenceIndex}`}
+                        className="rounded-md border border-cyan-400/20 bg-cyan-400/10 p-3"
+                      >
                         <p className="text-xs font-semibold uppercase tracking-wide text-cyan-200">{item.title}</p>
                         <p className="mt-1 line-clamp-3 text-xs leading-5 text-slate-400">{item.detail}</p>
                       </div>
