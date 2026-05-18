@@ -1,5 +1,6 @@
 import { readdir, readFile } from "fs/promises";
 import path from "path";
+import { inflateSync } from "zlib";
 import { formatNumber, formatPercent } from "@/lib/utils/numbers";
 import type { AnalyticsData, NormalizedTrade, RagChunk } from "@/types";
 
@@ -118,16 +119,14 @@ export class ChunkBuilder {
     try {
       const files = await readdir(folder);
       for (const file of files) {
-        if (!file.endsWith(".md") && !file.endsWith(".txt")) {
+        const extension = path.extname(file).toLowerCase();
+        if (![".md", ".txt", ".pdf"].includes(extension)) {
           continue;
         }
 
-        const content = await readFile(path.join(folder, file), "utf8");
-        const sections = content
-          .split(/\n\s*\n/g)
-          .map((section) => section.trim())
-          .filter((section) => section.length > 40)
-          .slice(0, 20);
+        const fullPath = path.join(folder, file);
+        const content = extension === ".pdf" ? extractPdfText(await readFile(fullPath)) : await readFile(fullPath, "utf8");
+        const sections = splitMaterialIntoSections(content).slice(0, extension === ".pdf" ? 35 : 20);
 
         sections.forEach((section, index) => {
           chunks.push({
@@ -138,7 +137,8 @@ export class ChunkBuilder {
             content: section.slice(0, 1800),
             metadata: {
               file,
-              index
+              index,
+              format: extension.replace(".", "")
             }
           });
         });
@@ -169,3 +169,140 @@ export class ChunkBuilder {
   }
 }
 
+function splitMaterialIntoSections(content: string): string[] {
+  const paragraphs = content
+    .replace(/\r/g, "")
+    .split(/\n\s*\n/g)
+    .map((section) => normalizeExtractedText(section))
+    .filter((section) => section.length > 40);
+
+  if (paragraphs.length > 0) {
+    return paragraphs;
+  }
+
+  return normalizeExtractedText(content)
+    .match(/.{1,1400}(?:\s|$)/g)
+    ?.map((section) => section.trim())
+    .filter((section) => section.length > 40) ?? [];
+}
+
+function normalizeExtractedText(text: string): string {
+  return text
+    .replace(/\u0000/g, "")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function extractPdfText(buffer: Buffer): string {
+  const raw = buffer.toString("latin1");
+  const streams = extractPdfStreams(raw);
+  const extracted: string[] = [];
+
+  for (const stream of streams) {
+    const inflated = stream.flateDecode ? inflatePdfStream(stream.content) : Buffer.from(stream.content, "latin1");
+    if (!inflated) {
+      continue;
+    }
+
+    extracted.push(extractTextOperators(inflated.toString("latin1")));
+  }
+
+  const text = normalizeExtractedText(extracted.join("\n\n"));
+
+  if (text.length > 80) {
+    return text;
+  }
+
+  return extractTextOperators(raw);
+}
+
+function extractPdfStreams(raw: string): Array<{ content: string; flateDecode: boolean }> {
+  const streams: Array<{ content: string; flateDecode: boolean }> = [];
+  const regex = /<<(.*?)>>\s*stream\r?\n?([\s\S]*?)\r?\n?endstream/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(raw))) {
+    streams.push({
+      content: match[2],
+      flateDecode: match[1].includes("/FlateDecode")
+    });
+  }
+
+  return streams;
+}
+
+function inflatePdfStream(content: string): Buffer | null {
+  const streamBuffer = Buffer.from(content, "latin1");
+
+  try {
+    return inflateSync(streamBuffer);
+  } catch {
+    const trimmed = trimPdfStreamBuffer(streamBuffer);
+    try {
+      return inflateSync(trimmed);
+    } catch {
+      return null;
+    }
+  }
+}
+
+function trimPdfStreamBuffer(buffer: Buffer): Buffer {
+  let start = 0;
+  let end = buffer.length;
+
+  while (start < end && (buffer[start] === 0x0a || buffer[start] === 0x0d || buffer[start] === 0x20)) {
+    start += 1;
+  }
+
+  while (end > start && (buffer[end - 1] === 0x0a || buffer[end - 1] === 0x0d || buffer[end - 1] === 0x20)) {
+    end -= 1;
+  }
+
+  return buffer.subarray(start, end);
+}
+
+function extractTextOperators(content: string): string {
+  const pieces: string[] = [];
+
+  for (const match of content.matchAll(/\((?:\\.|[^\\)])*\)\s*Tj/g)) {
+    pieces.push(decodePdfString(match[0].replace(/\s*Tj$/, "")));
+  }
+
+  for (const match of content.matchAll(/\[(.*?)\]\s*TJ/gs)) {
+    const arrayContent = match[1];
+    const strings = [...arrayContent.matchAll(/\((?:\\.|[^\\)])*\)/g)].map((item) => decodePdfString(item[0]));
+    if (strings.length > 0) {
+      pieces.push(strings.join(""));
+    }
+  }
+
+  for (const match of content.matchAll(/<([0-9A-Fa-f\s]+)>\s*Tj/g)) {
+    pieces.push(decodePdfHexString(match[1]));
+  }
+
+  return normalizeExtractedText(pieces.join(" "));
+}
+
+function decodePdfString(value: string): string {
+  const inner = value.startsWith("(") && value.endsWith(")") ? value.slice(1, -1) : value;
+  return inner
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\n")
+    .replace(/\\t/g, " ")
+    .replace(/\\\(/g, "(")
+    .replace(/\\\)/g, ")")
+    .replace(/\\\\/g, "\\")
+    .replace(/\\([0-7]{1,3})/g, (_, octal: string) => String.fromCharCode(parseInt(octal, 8)));
+}
+
+function decodePdfHexString(value: string): string {
+  const hex = value.replace(/\s+/g, "");
+  const bytes: number[] = [];
+
+  for (let index = 0; index < hex.length - 1; index += 2) {
+    bytes.push(parseInt(hex.slice(index, index + 2), 16));
+  }
+
+  return Buffer.from(bytes).toString("utf8").replace(/\u0000/g, "");
+}
