@@ -9,3 +9,19 @@ coverage
 .vercel
 prisma/dev.db
 tsconfig.tsbuildinfo
+
+# Local dev artifacts (Ruflo, RAG, vector stores)
+agentdb.rvf
+agentdb.rvf.lock
+ruvector.db
+*.rvf
+.ruflo/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Sentry
+.sentryclirc
