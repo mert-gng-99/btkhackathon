@@ -3,10 +3,11 @@ export const COACH_DISCLAIMER =
 
 export const SUGGESTED_COACH_QUESTIONS = [
   "What are my biggest trading mistakes?",
+  "What type of trader am I?",
   "Do I overtrade?",
   "How much do fees hurt me?",
   "When do I usually lose control?",
+  "Which hours look weakest for me?",
   "Which symbols dominate my trading?",
   "What patterns do you see in my trades?"
 ];
-

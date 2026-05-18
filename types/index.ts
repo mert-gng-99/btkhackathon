@@ -146,11 +146,33 @@ export interface AiEvidence {
   sourceRef: string;
 }
 
+export interface CoachKeyFinding {
+  title: string;
+  detail: string;
+  severity: InsightSeverity;
+  evidenceRef?: string;
+}
+
+export interface CoachSubAgentResult {
+  id: string;
+  agent: string;
+  objective: string;
+  status: "completed" | "skipped";
+  result: string;
+  findings: string[];
+  evidenceRefs: string[];
+  confidence: "low" | "medium" | "high";
+}
+
 export interface AiCoachAnswer {
   answer: string;
+  keyFindings: CoachKeyFinding[];
   evidence: AiEvidence[];
   retrievedChunks: RagChunk[];
+  subAgentResults: CoachSubAgentResult[];
+  traderProfile?: TraderProfile;
   disclaimer: string;
+  structuredVersion: "agentic-v1";
 }
 
 export interface AiReport {
@@ -187,6 +209,8 @@ export interface StoredSession {
   chunks: RagChunk[];
   reports: AiReport[];
   warnings: string[];
+  traderProfile?: TraderProfile;
+  traderProfileGeneratedAt?: string;
 }
 
 export interface SyncJobProgress {

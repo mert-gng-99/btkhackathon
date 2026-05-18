@@ -14,15 +14,22 @@ interface TraderProfileCardProps {
 export function TraderProfileCard({ sessionId }: TraderProfileCardProps) {
   const [profile, setProfile] = useState<TraderProfile | null>(null);
   const [configured, setConfigured] = useState(false);
+  const [cached, setCached] = useState(false);
+  const [generatedAt, setGeneratedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const storageKey = `trader-profile:${sessionId}`;
 
-  async function loadProfile() {
+  async function loadProfile(refresh = false) {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(`/api/insights/trader-profile?sessionId=${encodeURIComponent(sessionId)}`, {
+      const params = new URLSearchParams({
+        sessionId,
+        ...(refresh ? { refresh: "1" } : {})
+      });
+      const response = await fetch(`/api/insights/trader-profile?${params.toString()}`, {
         cache: "no-store"
       });
       const payload = await response.json();
@@ -30,7 +37,18 @@ export function TraderProfileCard({ sessionId }: TraderProfileCardProps) {
         throw new Error(payload.error ?? "Trader profile generation failed.");
       }
       setConfigured(Boolean(payload.configured));
+      setCached(Boolean(payload.cached));
+      setGeneratedAt(typeof payload.generatedAt === "string" ? payload.generatedAt : null);
       setProfile(payload.profile);
+      sessionStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          configured: Boolean(payload.configured),
+          cached: true,
+          generatedAt: typeof payload.generatedAt === "string" ? payload.generatedAt : null,
+          profile: payload.profile
+        })
+      );
     } catch (profileError: unknown) {
       setError(profileError instanceof Error ? profileError.message : "Trader profile generation failed.");
     } finally {
@@ -39,7 +57,29 @@ export function TraderProfileCard({ sessionId }: TraderProfileCardProps) {
   }
 
   useEffect(() => {
-    void loadProfile();
+    const cachedProfile = sessionStorage.getItem(storageKey);
+    if (cachedProfile) {
+      try {
+        const parsed = JSON.parse(cachedProfile) as {
+          configured?: boolean;
+          cached?: boolean;
+          generatedAt?: string | null;
+          profile?: TraderProfile;
+        };
+        if (parsed.profile) {
+          setConfigured(Boolean(parsed.configured));
+          setCached(Boolean(parsed.cached));
+          setGeneratedAt(parsed.generatedAt ?? null);
+          setProfile(parsed.profile);
+          setLoading(false);
+          return;
+        }
+      } catch {
+        sessionStorage.removeItem(storageKey);
+      }
+    }
+
+    void loadProfile(false);
   }, [sessionId]);
 
   return (
@@ -55,7 +95,7 @@ export function TraderProfileCard({ sessionId }: TraderProfileCardProps) {
               <p className="mt-1 text-sm text-slate-500">Behavioral trader type analysis grounded in your metrics.</p>
             </div>
           </div>
-          <Button type="button" variant="secondary" onClick={loadProfile} disabled={loading}>
+          <Button type="button" variant="secondary" onClick={() => loadProfile(true)} disabled={loading}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-4 w-4" aria-hidden="true" />}
             Regenerate
           </Button>
@@ -91,6 +131,8 @@ export function TraderProfileCard({ sessionId }: TraderProfileCardProps) {
                 <Badge tone={profile.confidence === "high" ? "emerald" : profile.confidence === "medium" ? "amber" : "slate"}>
                   {profile.confidence} confidence
                 </Badge>
+                {cached ? <Badge tone="slate">cached session profile</Badge> : null}
+                {generatedAt ? <Badge tone="slate">generated {new Date(generatedAt).toLocaleString()}</Badge> : null}
               </div>
               <p className="mt-4 text-sm leading-6 text-slate-300">{profile.summary}</p>
             </div>
@@ -137,4 +179,3 @@ function ProfileList({ title, items, tone }: { title: string; items: string[]; t
     </div>
   );
 }
-

@@ -4,7 +4,7 @@ import { InsightGenerator } from "@/lib/analytics/InsightGenerator";
 import { ChunkBuilder } from "@/lib/rag/ChunkBuilder";
 import { ReportService } from "@/lib/rag/ReportService";
 import { VectorStoreService } from "@/lib/rag/VectorStoreService";
-import type { NormalizedTrade, StoredSession } from "@/types";
+import type { NormalizedTrade, StoredSession, TraderProfile } from "@/types";
 
 const SESSION_TTL_HOURS = 24;
 
@@ -95,5 +95,23 @@ export const sessionStore = {
   get(id: string): StoredSession | null {
     cleanupExpired();
     return sessions.get(id) ?? null;
+  },
+
+  setTraderProfile(id: string, profile: TraderProfile): StoredSession | null {
+    cleanupExpired();
+    const session = sessions.get(id);
+
+    if (!session) {
+      return null;
+    }
+
+    const updated: StoredSession = {
+      ...session,
+      traderProfile: profile,
+      traderProfileGeneratedAt: new Date().toISOString()
+    };
+
+    sessions.set(id, updated);
+    return updated;
   }
 };

@@ -35,12 +35,47 @@ export class TraderProfileService {
     }
 
     const prompt = buildPrompt(analytics, trades);
-    return this.gemini.generateJson<TraderProfile>({
+    const profile = await this.gemini.generateJson<Partial<TraderProfile>>({
       systemInstruction: SYSTEM_PROMPT,
       prompt,
       temperature: 0.15
     });
+
+    return normalizeTraderProfile(profile);
   }
+}
+
+function normalizeList(items: unknown, limit: number): string[] {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  return items
+    .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    .map((item) => item.trim())
+    .slice(0, limit);
+}
+
+function normalizeConfidence(value: unknown): "low" | "medium" | "high" {
+  return value === "high" || value === "medium" || value === "low" ? value : "medium";
+}
+
+function normalizeTraderProfile(profile: Partial<TraderProfile>): TraderProfile {
+  return {
+    traderType:
+      typeof profile.traderType === "string" && profile.traderType.trim().length > 0 ? profile.traderType.trim() : "Unclassified trader",
+    confidence: normalizeConfidence(profile.confidence),
+    summary:
+      typeof profile.summary === "string" && profile.summary.trim().length > 0
+        ? profile.summary.trim()
+        : "Gemini returned an incomplete profile, so only the available structured fields are shown.",
+    evidence: normalizeList(profile.evidence, 8),
+    strengths: normalizeList(profile.strengths, 6),
+    risks: normalizeList(profile.risks, 6),
+    behavioralTags: normalizeList(profile.behavioralTags, 10),
+    reflectionQuestions: normalizeList(profile.reflectionQuestions, 6),
+    insufficientData: Boolean(profile.insufficientData)
+  };
 }
 
 function buildPrompt(analytics: AnalyticsData, trades: NormalizedTrade[]): string {
@@ -143,4 +178,3 @@ function buildPrompt(analytics: AnalyticsData, trades: NormalizedTrade[]): strin
     2
   );
 }
-
