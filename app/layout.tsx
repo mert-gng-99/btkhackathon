@@ -5,6 +5,8 @@ import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
 import { I18nProvider } from "@/lib/i18n";
 import { SessionProviderWrapper } from "@/components/auth/SessionProviderWrapper";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const interTight = Inter_Tight({
   subsets: ["latin"],
@@ -35,6 +37,8 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
             <AppShell>{children}</AppShell>
           </I18nProvider>
         </SessionProviderWrapper>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
