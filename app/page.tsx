@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import "./showcase.css";
+import { useI18n } from "@/lib/i18n";
 
 const heroCandles = [
   { delay: -5.5, x: 80, wickY1: 180, wickY2: 310, rectY: 210, rectH: 70, color: "#5BD5A0" },
@@ -46,6 +47,9 @@ const streamSymbols = [
 ];
 
 export default function ShowcasePage() {
+  const { locale, toggleLocale, dict } = useI18n();
+  const t = dict.home;
+
   useEffect(() => {
     const reveals = document.querySelectorAll<HTMLElement>("[data-reveal]");
     const revealObs = new IntersectionObserver(
@@ -133,17 +137,44 @@ export default function ShowcasePage() {
       <div className="topbar">
         <div className="brand">
           <span className="brand-mark" />
-          <span>TradeLens</span>
-          <span className="label-mono" style={{ marginLeft: 8, color: "var(--ink-3)" }}>v0.4 · /showcase</span>
+          <span>{dict.common.appName}</span>
+          <span className="label-mono" style={{ marginLeft: 8, color: "var(--ink-3)" }}>{dict.common.version} · /showcase</span>
         </div>
         <nav className="topnav">
-          <a href="#hero">Overview</a>
-          <a href="#read-only">Security</a>
-          <a href="#analytics">Analytics</a>
-          <a href="#coach">AI Coach</a>
-          <a href="#sync">Sync</a>
+          <a href="#hero">{t.nav.overview}</a>
+          <a href="#read-only">{t.nav.security}</a>
+          <a href="#analytics">{t.nav.analytics}</a>
+          <a href="#coach">{t.nav.coach}</a>
+          <a href="#sync">{t.nav.sync}</a>
         </nav>
-        <Link href="/connect" className="topcta">Open TradeLens →</Link>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button
+            type="button"
+            onClick={toggleLocale}
+            aria-label={dict.language.toggleLabel}
+            title={dict.language.toggleLabel}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              padding: "6px 10px",
+              border: "1px solid var(--line-strong)",
+              borderRadius: 8,
+              background: "rgba(255, 255, 255, 0.04)",
+              color: "var(--ink-2)",
+              fontFamily: "var(--font-jetbrains-mono), 'JetBrains Mono', monospace",
+              fontSize: 11,
+              letterSpacing: "0.08em",
+              cursor: "pointer",
+              minHeight: 32
+            }}
+          >
+            <span style={{ color: locale === "en" ? "var(--amber)" : "inherit" }}>{dict.language.short.en}</span>
+            <span aria-hidden="true">·</span>
+            <span style={{ color: locale === "tr" ? "var(--amber)" : "inherit" }}>{dict.language.short.tr}</span>
+          </button>
+          <Link href="/connect" className="topcta">{dict.common.openApp} →</Link>
+        </div>
       </div>
 
       <div className="progress" id="tl-progress" />
@@ -225,18 +256,16 @@ export default function ShowcasePage() {
           </div>
 
           <div className="hero hero-inner stagger reveal" data-reveal>
-            <span className="eyebrow"><span className="pulse" />Read-only · No trading access</span>
-            <h1 className="display">See how you<br />actually trade.</h1>
-            <p className="sub">
-              Connect a read-only Binance key. TradeLens replays your Spot and Futures history into evidence-backed behavior analytics and a grounded AI coach.
-            </p>
+            <span className="eyebrow"><span className="pulse" />{t.hero.eyebrow}</span>
+            <h1 className="display">{t.hero.title[0]}<br />{t.hero.title[1]}</h1>
+            <p className="sub">{t.hero.sub}</p>
             <div className="ctas">
               <Link className="btn btn-primary" href="/connect">
-                Analyze my trades <span className="arrow">→</span>
+                {t.hero.ctaPrimary} <span className="arrow">→</span>
               </Link>
               <Link className="btn btn-ghost" href="/ai-coach">
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 2 L11 7 L3 12 Z" fill="currentColor" /></svg>
-                Watch 60-sec tour
+                {t.hero.ctaSecondary}
               </Link>
             </div>
             <div className="trust">
@@ -244,31 +273,31 @@ export default function ShowcasePage() {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M3 12h12M3 6h12M3 18h12M21 9l-3 3 3 3" /><line x1="14" y1="6" x2="22" y2="14" />
                 </svg>
-                No withdrawals
+                {t.hero.trust.noWithdrawals}
               </div>
               <div className="item">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
                 </svg>
-                No trading
+                {t.hero.trust.noTrading}
               </div>
               <div className="item">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="12" cy="12" r="9" /><path d="M8 12l3 3 5-6" />
                 </svg>
-                Secrets discarded
+                {t.hero.trust.secretsDiscarded}
               </div>
               <div className="item">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M16 18l6-6-6-6M8 6l-6 6 6 6" />
                 </svg>
-                Open source friendly
+                {t.hero.trust.openSource}
               </div>
             </div>
           </div>
 
           <div className="scroll-hint" aria-hidden="true">
-            <span>SCROLL</span>
+            <span>{t.hero.scroll}</span>
             <span className="chev" />
           </div>
         </section>
@@ -288,22 +317,22 @@ export default function ShowcasePage() {
               }}
             >
               <div>
-                <div className="label-mono" style={{ marginBottom: 8 }}>WHAT IT IS</div>
+                <div className="label-mono" style={{ marginBottom: 8 }}>{t.intro.whatItIs}</div>
                 <div style={{ fontSize: 17, lineHeight: 1.5, color: "var(--ink-2)", maxWidth: 380 }}>
-                  A read-only Binance analytics layer. You bring a key, TradeLens shows you the pattern in your own trading.
+                  {t.intro.whatItIsBody}
                 </div>
               </div>
               <div>
-                <div className="label-mono" style={{ marginBottom: 6 }}>MARKETS</div>
-                <div style={{ fontSize: 15, color: "var(--ink)" }}>Spot · USD-M · COIN-M</div>
+                <div className="label-mono" style={{ marginBottom: 6 }}>{t.intro.markets}</div>
+                <div style={{ fontSize: 15, color: "var(--ink)" }}>{t.intro.marketsBody}</div>
               </div>
               <div>
-                <div className="label-mono" style={{ marginBottom: 6 }}>STACK</div>
-                <div style={{ fontSize: 15, color: "var(--ink)" }}>Next.js · Prisma · Gemini</div>
+                <div className="label-mono" style={{ marginBottom: 6 }}>{t.intro.stack}</div>
+                <div style={{ fontSize: 15, color: "var(--ink)" }}>{t.intro.stackBody}</div>
               </div>
               <div>
-                <div className="label-mono" style={{ marginBottom: 6 }}>STATUS</div>
-                <div className="mono" style={{ fontSize: 15, color: "var(--green)" }}>● v0.4 · public preview</div>
+                <div className="label-mono" style={{ marginBottom: 6 }}>{t.intro.status}</div>
+                <div className="mono" style={{ fontSize: 15, color: "var(--green)" }}>● {t.intro.statusBody}</div>
               </div>
             </div>
           </div>
@@ -314,69 +343,55 @@ export default function ShowcasePage() {
           <div className="grid-overlay" />
           <div className="two-col l60">
             <div className="reveal" data-reveal>
-              <div className="video-frame" aria-label="Permission check rejecting a key with trade scope and accepting a read-only key">
-                <span className="video-badge"><span className="rec" />LIVE · KEY VALIDATION</span>
+              <div className="video-frame">
+                <span className="video-badge"><span className="rec" />{t.security.keyCard.loopName}</span>
                 <div className="scene-keys">
                   <div className="key-card swap">
-                    <div className="row"><span className="k">API Key</span><span className="v mono">····7F4A · 9E2C</span></div>
-                    <div className="row"><span className="k">Account scope</span><span className="v">Spot + Futures (read)</span></div>
-                    <div className="row flash-red"><span className="k">Enable Trading</span><span className="v">DENIED</span></div>
-                    <div className="row flash-red"><span className="k">Enable Withdrawals</span><span className="v">DENIED</span></div>
-                    <div className="row flash-green"><span className="k">Enable Reading</span><span className="v">OK</span></div>
+                    <div className="row"><span className="k">{t.security.keyCard.apiKey}</span><span className="v mono">····7F4A · 9E2C</span></div>
+                    <div className="row"><span className="k">{t.security.keyCard.accountScope}</span><span className="v">{t.security.keyCard.scopeValue}</span></div>
+                    <div className="row flash-red"><span className="k">{t.security.keyCard.enableTrading}</span><span className="v">{t.security.keyCard.denied}</span></div>
+                    <div className="row flash-red"><span className="k">{t.security.keyCard.enableWithdrawals}</span><span className="v">{t.security.keyCard.denied}</span></div>
+                    <div className="row flash-green"><span className="k">{t.security.keyCard.enableReading}</span><span className="v">{t.security.keyCard.ok}</span></div>
                     <div className="key-status" style={{ background: "rgba(91,213,160,0.1)", color: "var(--green)", border: "1px solid rgba(91,213,160,0.25)" }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12l4 4 10-10" /></svg>
-                      READ-ONLY KEY ACCEPTED
+                      {t.security.keyCard.accepted}
                     </div>
                     <div className="stamp-x">✕</div>
                     <div className="stamp-check">✓</div>
                   </div>
                 </div>
-                <div className="video-caption"><span>permission-check.loop</span><span>00:04 / 00:08</span></div>
+                <div className="video-caption"><span>{t.security.keyCard.loopName}</span><span>00:04 / 00:08</span></div>
               </div>
             </div>
 
             <div className="reveal stagger" data-reveal>
-              <span className="label-mono">SECURITY POSTURE</span>
-              <h2 className="heading">Your keys never<br />leave the boundary.</h2>
-              <p className="sub" style={{ marginBottom: 18 }}>
-                The backend inspects scope before a single request goes out. Keys with <span style={{ color: "var(--ink)" }}>trade</span> or <span style={{ color: "var(--ink)" }}>withdrawal</span> permission are rejected at the boundary — not later, not silently.
-              </p>
+              <span className="label-mono">{t.security.eyebrow}</span>
+              <h2 className="heading">{t.security.title[0]}<br />{t.security.title[1]}</h2>
+              <p className="sub" style={{ marginBottom: 18 }}>{t.security.sub}</p>
 
-              <div className="bullet">
-                <span className="icon">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                  </svg>
-                </span>
-                <div>
-                  <div className="title">Scope inspected before use</div>
-                  <div className="desc">
-                    If the key reports <span className="mono">canTrade</span> or <span className="mono">enableWithdrawals</span>, the request never leaves the validator.
+              {t.security.bullets.map((bullet, i) => (
+                <div className="bullet" key={i}>
+                  <span className="icon">
+                    {i === 0 ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                      </svg>
+                    ) : i === 1 ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+                      </svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M4 6h16M4 12h16M4 18h10" />
+                      </svg>
+                    )}
+                  </span>
+                  <div>
+                    <div className="title">{bullet.title}</div>
+                    <div className="desc">{bullet.desc}</div>
                   </div>
                 </div>
-              </div>
-              <div className="bullet">
-                <span className="icon">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
-                  </svg>
-                </span>
-                <div>
-                  <div className="title">Temporary session</div>
-                  <div className="desc">Secrets exist only inside an encrypted, time-bound session. Nothing persisted, nothing logged.</div>
-                </div>
-              </div>
-              <div className="bullet">
-                <span className="icon">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M4 6h16M4 12h16M4 18h10" />
-                  </svg>
-                </span>
-                <div>
-                  <div className="title">Auditable surface</div>
-                  <div className="desc">Every outbound Binance call is signed, rate-limited, and traced — keys redacted at every hop.</div>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </section>
@@ -385,39 +400,37 @@ export default function ShowcasePage() {
         <section className="section" id="analytics">
           <div className="grid-overlay" />
           <div className="center-col stagger reveal" data-reveal>
-            <span className="label-mono">BEHAVIOR ANALYTICS</span>
-            <h2 className="heading" style={{ maxWidth: 1100 }}>Numbers that explain your habits,<br />not just your P/L.</h2>
-            <p className="sub" style={{ marginBottom: 36 }}>
-              Volume, fees, rapid-trade clusters, symbol concentration, buy/sell split, estimated Spot PnL — replayed straight from your own history.
-            </p>
+            <span className="label-mono">{t.analytics.eyebrow}</span>
+            <h2 className="heading" style={{ maxWidth: 1100 }}>{t.analytics.title[0]}<br />{t.analytics.title[1]}</h2>
+            <p className="sub" style={{ marginBottom: 36 }}>{t.analytics.sub}</p>
 
             <div style={{ position: "relative", width: "min(1120px, 100%)" }}>
-              <div className="video-frame" aria-label="Dashboard with KPI counters, bar chart, and donut animating up">
-                <span className="video-badge"><span className="rec" />LIVE · DASHBOARD</span>
+              <div className="video-frame">
+                <span className="video-badge"><span className="rec" />{t.analytics.dash.loopName}</span>
                 <div className="scene-dash">
                   <div className="dash-kpi">
-                    <div className="k">Volume (30d)</div>
-                    <div className="v numeric"><span data-count-to="92.4">0.0</span><span className="u">K USDT</span></div>
-                    <div className="d">▲ 12.6%</div>
+                    <div className="k">{t.analytics.dash.volume}</div>
+                    <div className="v numeric"><span data-count-to="92.4">0.0</span><span className="u">{t.analytics.dash.volumeUnit}</span></div>
+                    <div className="d">{t.analytics.kpiDeltas.volume}</div>
                   </div>
                   <div className="dash-kpi">
-                    <div className="k">Fees</div>
-                    <div className="v numeric"><span data-count-to="81.7">0.0</span><span className="u">USDT</span></div>
-                    <div className="d" style={{ color: "var(--amber)" }}>— stable</div>
+                    <div className="k">{t.analytics.dash.fees}</div>
+                    <div className="v numeric"><span data-count-to="81.7">0.0</span><span className="u">{t.analytics.dash.feesUnit}</span></div>
+                    <div className="d" style={{ color: "var(--amber)" }}>{t.analytics.kpiDeltas.feesStable}</div>
                   </div>
                   <div className="dash-kpi">
-                    <div className="k">Rapid trades</div>
+                    <div className="k">{t.analytics.dash.rapidTrades}</div>
                     <div className="v numeric"><span data-count-to="41">0</span></div>
-                    <div className="d" style={{ color: "var(--red)" }}>▲ 9 clusters</div>
+                    <div className="d" style={{ color: "var(--red)" }}>{t.analytics.kpiDeltas.rapidClusters}</div>
                   </div>
 
                   <div className="dash-chart">
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                       <div>
-                        <div className="k" style={{ color: "var(--ink-3)", fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "var(--font-jetbrains-mono), 'JetBrains Mono', monospace" }}>Volume by day</div>
-                        <div className="mono" style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 2 }}>last 14d · USDT</div>
+                        <div className="k" style={{ color: "var(--ink-3)", fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "var(--font-jetbrains-mono), 'JetBrains Mono', monospace" }}>{t.analytics.dash.volumeChart}</div>
+                        <div className="mono" style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 2 }}>{t.analytics.dash.volumeChartSub}</div>
                       </div>
-                      <div className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>peak <span style={{ color: "var(--cyan)" }}>14.2K</span></div>
+                      <div className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>{t.analytics.dash.peak} <span style={{ color: "var(--cyan)" }}>14.2K</span></div>
                     </div>
                     <svg viewBox="0 0 600 140" preserveAspectRatio="none" style={{ width: "100%", height: 120 }}>
                       <g transform="translate(0,140) scale(1,-1)">
@@ -440,7 +453,7 @@ export default function ShowcasePage() {
                   </div>
 
                   <div className="dash-donut">
-                    <div className="k" style={{ alignSelf: "flex-start", color: "var(--ink-3)", fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "var(--font-jetbrains-mono), 'JetBrains Mono', monospace" }}>Symbol concentration</div>
+                    <div className="k" style={{ alignSelf: "flex-start", color: "var(--ink-3)", fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "var(--font-jetbrains-mono), 'JetBrains Mono', monospace" }}>{t.analytics.dash.symbolConcentration}</div>
                     <svg className="donut-ring" width="120" height="120" viewBox="0 0 100 100" style={{ margin: "8px 0" }}>
                       <circle className="track" cx="50" cy="50" r="40" />
                       <circle className="arc" cx="50" cy="50" r="40" />
@@ -449,18 +462,18 @@ export default function ShowcasePage() {
                       <div className="numeric" style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.02em" }}>
                         68<span style={{ color: "var(--ink-3)", fontSize: 13 }}>%</span>
                       </div>
-                      <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-3)", marginTop: 2 }}>BTC / ETH dominance</div>
+                      <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-3)", marginTop: 2 }}>{t.analytics.dash.dominance}</div>
                     </div>
                   </div>
                 </div>
 
-                <div className="callout callout-1"><span className="pin">◆</span>Symbol concentration</div>
-                <div className="callout callout-2 right"><span className="pin">◆</span>Estimated Spot PnL</div>
-                <div className="callout callout-3"><span className="pin">◆</span>Rapid-trade detection</div>
+                <div className="callout callout-1"><span className="pin">◆</span>{t.analytics.callouts.concentration}</div>
+                <div className="callout callout-2 right"><span className="pin">◆</span>{t.analytics.callouts.spotPnl}</div>
+                <div className="callout callout-3"><span className="pin">◆</span>{t.analytics.callouts.rapidTrades}</div>
 
                 <div className="video-caption">
-                  <span>dashboard.loop</span>
-                  <span style={{ color: "var(--cyan)" }}>est. Spot PnL · +1,284 USDT</span>
+                  <span>{t.analytics.dash.loopName}</span>
+                  <span style={{ color: "var(--cyan)" }}>{t.analytics.dash.spotPnlValue}</span>
                 </div>
               </div>
             </div>
@@ -472,78 +485,70 @@ export default function ShowcasePage() {
           <div className="grid-overlay" />
           <div className="two-col r60">
             <div className="reveal stagger" data-reveal>
-              <span className="label-mono">GROUNDED AI COACH</span>
-              <h2 className="heading">An AI coach that<br />cites its evidence.</h2>
-              <p className="sub" style={{ marginBottom: 14 }}>
-                Answers are retrieved from your own trade summaries and RAG chunks — never extrapolated. Every claim links back to the rows it came from.
-              </p>
-              <p className="sub" style={{ marginBottom: 24, color: "var(--ink-3)", fontSize: 14 }}>
-                No hallucinated history. No trade recommendations. No advice the model can't show its work for.
-              </p>
+              <span className="label-mono">{t.coach.eyebrow}</span>
+              <h2 className="heading">{t.coach.title[0]}<br />{t.coach.title[1]}</h2>
+              <p className="sub" style={{ marginBottom: 14 }}>{t.coach.sub}</p>
+              <p className="sub" style={{ marginBottom: 24, color: "var(--ink-3)", fontSize: 14 }}>{t.coach.subNote}</p>
 
-              <div className="bullet">
-                <span className="icon">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M4 7h16M4 12h16M4 17h10" />
-                  </svg>
-                </span>
-                <div>
-                  <div className="title">Retrieval over your data</div>
-                  <div className="desc">Each answer pulls from indexed trade summaries — BTCUSDT, ETHUSDT, futures positions, fee periods.</div>
+              {t.coach.bullets.map((bullet, i) => (
+                <div className="bullet" key={i}>
+                  <span className="icon">
+                    {i === 0 ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M4 7h16M4 12h16M4 17h10" />
+                      </svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="9" /><path d="M9 12l2 2 4-4" />
+                      </svg>
+                    )}
+                  </span>
+                  <div>
+                    <div className="title">{bullet.title}</div>
+                    <div className="desc">{bullet.desc}</div>
+                  </div>
                 </div>
-              </div>
-              <div className="bullet">
-                <span className="icon">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="9" /><path d="M9 12l2 2 4-4" />
-                  </svg>
-                </span>
-                <div>
-                  <div className="title">Citations attached</div>
-                  <div className="desc">Tap a citation chip to open the source trade row. If there's no source, the coach declines.</div>
-                </div>
-              </div>
-              <p className="mono" style={{ color: "var(--ink-3)", fontSize: 11, marginTop: 24 }}>Powered by Gemini + local RAG.</p>
+              ))}
+              <p className="mono" style={{ color: "var(--ink-3)", fontSize: 11, marginTop: 24 }}>{t.coach.footnote}</p>
             </div>
 
             <div className="reveal" data-reveal>
               <div
                 className="video-frame"
-                aria-label="Phone mock of AI coach answering with citation chips"
                 style={{ background: "radial-gradient(500px 400px at center, rgba(91,224,230,0.08), transparent 70%)" }}
               >
-                <span className="video-badge"><span className="rec" />AI COACH · BTCUSDT THREAD</span>
+                <span className="video-badge"><span className="rec" />{t.coach.eyebrow} · BTCUSDT</span>
                 <div className="scene-coach">
                   <div className="phone">
                     <div className="phone-header">
                       <div className="av" />
                       <div>
-                        <div className="nm">Coach</div>
-                        <div className="mono" style={{ fontSize: 9.5, color: "var(--ink-3)" }}>grounded · gemini</div>
+                        <div className="nm">{t.coach.phone.name}</div>
+                        <div className="mono" style={{ fontSize: 9.5, color: "var(--ink-3)" }}>{t.coach.phone.status}</div>
                       </div>
-                      <div className="st">● online</div>
+                      <div className="st">{t.coach.phone.online}</div>
                     </div>
                     <div className="phone-body">
-                      <div className="msg user msg-anim delay-1">Why did my BTCUSDT fees jump in October?</div>
+                      <div className="msg user msg-anim delay-1">{t.coach.phone.msg1}</div>
                       <div className="msg ai msg-anim delay-2">
-                        Your taker volume on BTCUSDT in Oct hit{" "}
-                        <span className="mono numeric" style={{ color: "var(--amber)" }}>38.2K</span> — about{" "}
-                        <span className="mono">3.1×</span> September. With taker fees at <span className="mono">0.04%</span>, that alone explains{" "}
-                        <span className="mono numeric" style={{ color: "var(--amber)" }}>+15.3 USDT</span> of the increase.
+                        {t.coach.phone.msg2Pre}
+                        <span className="mono numeric" style={{ color: "var(--amber)" }}>38.2K</span>{t.coach.phone.msg2Mid}
+                        <span className="mono">3.1×</span>{t.coach.phone.msg2Mid2}<span className="mono">0.04%</span>{t.coach.phone.msg2End}
+                        <span className="mono numeric" style={{ color: "var(--amber)" }}>+15.3 USDT</span>{t.coach.phone.msg2End2}
                         <div className="citations">
-                          <span className="cite">trade #482</span>
-                          <span className="cite">BTCUSDT · Oct</span>
-                          <span className="cite">fee-tier #2</span>
+                          <span className="cite">{t.coach.phone.cite1}</span>
+                          <span className="cite">{t.coach.phone.cite2}</span>
+                          <span className="cite">{t.coach.phone.cite3}</span>
                         </div>
                       </div>
-                      <div className="msg user msg-anim delay-3">Did I overtrade around CPI?</div>
+                      <div className="msg user msg-anim delay-3">{t.coach.phone.msg3}</div>
                       <div className="msg ai msg-anim delay-3" style={{ animationDelay: "6s" }}>
                         <div className="typing"><span /><span /><span /></div>
                       </div>
                     </div>
                   </div>
                 </div>
-                <div className="video-caption"><span>coach.loop</span><span>Powered by Gemini + local RAG</span></div>
+                <div className="video-caption"><span>{t.coach.phone.loopName}</span><span>{t.coach.phone.loopSub}</span></div>
               </div>
             </div>
           </div>
@@ -554,11 +559,11 @@ export default function ShowcasePage() {
           <div className="grid-overlay" />
           <div className="two-col l60">
             <div className="reveal" data-reveal>
-              <div className="video-frame" aria-label="Background sync job with progress bar, current symbol ticker, and trades-found counter">
-                <span className="video-badge"><span className="rec" />SYNC JOB · #2841</span>
+              <div className="video-frame">
+                <span className="video-badge"><span className="rec" />{t.sync.ui.jobId}</span>
                 <div className="scene-sync">
                   <div>
-                    <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-3)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>Progress</div>
+                    <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-3)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>{t.sync.ui.progress}</div>
                     <div className="sync-row">
                       <div className="sync-bar"><div className="fill" /></div>
                       <div className="numeric" style={{ fontWeight: 500, color: "var(--amber)" }}>62<span style={{ color: "var(--ink-3)" }}>%</span></div>
@@ -566,14 +571,14 @@ export default function ShowcasePage() {
                   </div>
 
                   <div className="sync-ticker">
-                    <span className="lk">Symbols scanned</span><span className="lv numeric" id="tl-sym-scanned">847 / 1,362</span>
-                    <span className="lk">Current symbol</span><span className="lv" id="tl-sym-current" style={{ color: "var(--cyan)" }}>SOLUSDT</span>
-                    <span className="lk">Trades found</span><span className="lv numeric" id="tl-trades-found" style={{ color: "var(--amber)" }}>12,418</span>
-                    <span className="lk">Markets</span><span className="lv">Spot · USD-M · COIN-M</span>
+                    <span className="lk">{t.sync.ui.symbolsScanned}</span><span className="lv numeric" id="tl-sym-scanned">847 / 1,362</span>
+                    <span className="lk">{t.sync.ui.currentSymbol}</span><span className="lv" id="tl-sym-current" style={{ color: "var(--cyan)" }}>SOLUSDT</span>
+                    <span className="lk">{t.sync.ui.tradesFound}</span><span className="lv numeric" id="tl-trades-found" style={{ color: "var(--amber)" }}>12,418</span>
+                    <span className="lk">{t.sync.ui.markets}</span><span className="lv">{t.sync.ui.marketsValue}</span>
                   </div>
 
                   <div>
-                    <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-3)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>Active stream</div>
+                    <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-3)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>{t.sync.ui.activeStream}</div>
                     <div className="symbol-stream">
                       <div className="track">
                         {[...streamSymbols, ...streamSymbols].map((s, i) => (
@@ -583,19 +588,19 @@ export default function ShowcasePage() {
                     </div>
                   </div>
                 </div>
-                <div className="video-caption"><span>sync.loop</span><span>est. remaining · 02:14</span></div>
+                <div className="video-caption"><span>{t.sync.ui.loopName}</span><span>{t.sync.ui.timeLeft}</span></div>
               </div>
             </div>
 
             <div className="reveal stagger" data-reveal>
-              <span className="label-mono">FULL-MARKET SCAN, LIVE</span>
-              <h2 className="heading">Scans every active<br />symbol — without<br />locking your UI.</h2>
-              <p className="sub" style={{ marginBottom: 18 }}>
-                Background workers stream through Spot, USD-M Futures, and COIN-M Futures with live progress polling. Filter by quote asset, or kick off a quick selected scan when you just want a slice.
-              </p>
+              <span className="label-mono">{t.sync.eyebrow}</span>
+              <h2 className="heading">{t.sync.title.map((line, i) => (
+                <span key={i}>{line}{i < t.sync.title.length - 1 ? <br /> : null}</span>
+              ))}</h2>
+              <p className="sub" style={{ marginBottom: 18 }}>{t.sync.sub}</p>
 
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
-                {["Spot", "USD-M Futures", "COIN-M Futures", "USDT", "BTC", "BNB", "TRY"].map((tag) => (
+                {t.sync.tags.map((tag) => (
                   <span key={tag} className="symbol-chip">{tag}</span>
                 ))}
               </div>
@@ -607,72 +612,59 @@ export default function ShowcasePage() {
         <section className="section footer" id="stack">
           <div className="grid-overlay" />
           <div className="center-col reveal stagger" data-reveal>
-            <span className="label-mono">BUILT WITH</span>
-            <h2 className="heading" style={{ maxWidth: 900 }}>A small, boring stack<br />holding up serious guarantees.</h2>
+            <span className="label-mono">{t.footer.eyebrow}</span>
+            <h2 className="heading" style={{ maxWidth: 900 }}>{t.footer.title[0]}<br />{t.footer.title[1]}</h2>
 
             <div className="stack-row">
-              {[
-                { label: "Next.js 14", amber: false },
-                { label: "TypeScript", amber: false },
-                { label: "Tailwind CSS", amber: false },
-                { label: "Prisma", amber: false },
-                { label: "PostgreSQL", amber: false },
-                { label: "Gemini", amber: true }
-              ].map((chip) => (
-                <div key={chip.label} className="stack-chip">
-                  <span className="d" style={chip.amber ? { background: "var(--amber)" } : undefined} />
-                  {chip.label}
+              {t.footer.stack.map((label, i) => (
+                <div key={label} className="stack-chip">
+                  <span className="d" style={i === t.footer.stack.length - 1 ? { background: "var(--amber)" } : undefined} />
+                  {label}
                 </div>
               ))}
             </div>
 
             <div className="reassure-grid">
-              <div className="reassure-card">
-                <div className="ic">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M4 6h16M4 12h16M4 18h10" /><circle cx="20" cy="18" r="2" />
-                  </svg>
+              {t.footer.reassureCards.map((card, i) => (
+                <div className="reassure-card" key={card.title}>
+                  <div className="ic">
+                    {i === 0 ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M4 6h16M4 12h16M4 18h10" /><circle cx="20" cy="18" r="2" />
+                      </svg>
+                    ) : i === 1 ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="8" r="4" /><path d="M4 22c0-4.4 3.6-8 8-8s8 3.6 8 8" />
+                      </svg>
+                    ) : (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="t">{card.title}</div>
+                  <div className="b">{card.body}</div>
                 </div>
-                <div className="t">No secrets in logs</div>
-                <div className="b">Keys and signed payloads are stripped before anything is written. Tracing keeps the shape, not the contents.</div>
-              </div>
-              <div className="reassure-card">
-                <div className="ic">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="8" r="4" /><path d="M4 22c0-4.4 3.6-8 8-8s8 3.6 8 8" />
-                  </svg>
-                </div>
-                <div className="t">Anonymized trader registry</div>
-                <div className="b">Each trader gets an opaque, rotating ID. Identity never crosses the analytics boundary.</div>
-              </div>
-              <div className="reassure-card">
-                <div className="ic">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
-                    <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
-                  </svg>
-                </div>
-                <div className="t">Open architecture</div>
-                <div className="b">Validator, sync workers, RAG pipeline, and coach are independent services with documented contracts.</div>
-              </div>
+              ))}
             </div>
 
             <div className="final-cta">
               <div>
-                <h3>Bring your read-only key.<br />Keep your edge.</h3>
-                <p>Spot · USD-M Futures · COIN-M Futures. Nothing to install.</p>
+                <h3>{t.footer.cta.title[0]}<br />{t.footer.cta.title[1]}</h3>
+                <p>{t.footer.cta.sub}</p>
               </div>
               <Link className="btn-final" href="/connect">
-                Open TradeLens <span>→</span>
+                {t.footer.cta.button} <span>→</span>
               </Link>
             </div>
 
             <div className="foot">
-              <div>© 2026 TradeLens · v0.4 · not affiliated with Binance</div>
+              <div>{t.footer.meta}</div>
               <div>
-                <a href="#gh">GitHub</a>
-                <a href="mailto:security@tradelens.dev">security@tradelens.dev</a>
-                <a href="#disclosure">Security disclosure</a>
+                <a href="#gh">{t.footer.links.github}</a>
+                <a href="mailto:security@tradelens.dev">{t.footer.links.security}</a>
+                <a href="#disclosure">{t.footer.links.disclosure}</a>
               </div>
             </div>
           </div>

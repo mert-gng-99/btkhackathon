@@ -21,6 +21,7 @@ import {
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
+import { useT } from "@/lib/i18n";
 import { SUGGESTED_COACH_QUESTIONS } from "@/lib/rag/ragTypes";
 import type { AiCoachAnswer, AnalyticsData, TraderProfile } from "@/types";
 
@@ -44,14 +45,6 @@ type AgentId =
   | "pnl_quality_agent"
   | "symbol_agent";
 
-const REPORT_STEPS = [
-  "Collecting all coach answers and sub-agent findings...",
-  "Gemini report writer is drafting the PDF summary...",
-  "Strict validator agent is reviewing the draft...",
-  "Applying validator feedback if needed...",
-  "Rendering the final PDF..."
-];
-
 function agentFromBackendName(agent: string): AgentId | null {
   if (
     agent === "rag_researcher" ||
@@ -63,31 +56,22 @@ function agentFromBackendName(agent: string): AgentId | null {
   ) {
     return agent;
   }
-
   return null;
 }
 
 function predictedAgentsForQuestion(question: string): AgentId[] {
   const lower = question.toLowerCase();
   const agents = new Set<AgentId>(["rag_researcher", "behavior_analyst"]);
-
-  if (lower.includes("revenge") || lower.includes("emotion") || lower.includes("control") || lower.includes("mistake") || lower.includes("loss")) {
-    agents.add("revenge_trading_agent");
-  }
-  if (lower.includes("pnl") || lower.includes("profit") || lower.includes("loss") || lower.includes("success") || lower.includes("performance")) {
-    agents.add("pnl_quality_agent");
-  }
-  if (lower.includes("coin") || lower.includes("symbol") || lower.includes("asset") || lower.includes("concentration")) {
-    agents.add("symbol_agent");
-  }
-  if (lower.includes("trader") || lower.includes("type") || lower.includes("profile") || lower.includes("pattern")) {
-    agents.add("profile_analyst");
-  }
-
+  if (lower.includes("revenge") || lower.includes("emotion") || lower.includes("control") || lower.includes("mistake") || lower.includes("loss")) agents.add("revenge_trading_agent");
+  if (lower.includes("pnl") || lower.includes("profit") || lower.includes("loss") || lower.includes("success") || lower.includes("performance")) agents.add("pnl_quality_agent");
+  if (lower.includes("coin") || lower.includes("symbol") || lower.includes("asset") || lower.includes("concentration")) agents.add("symbol_agent");
+  if (lower.includes("trader") || lower.includes("type") || lower.includes("profile") || lower.includes("pattern")) agents.add("profile_analyst");
   return [...agents].slice(0, 4);
 }
 
 export function CoachChat({ sessionId, analytics }: CoachChatProps) {
+  const t = useT();
+  const REPORT_STEPS = t.aiCoach.chat.reportSteps;
   const [question, setQuestion] = useState("");
   const [profile, setProfile] = useState<TraderProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -95,11 +79,7 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
   const [completedAgents, setCompletedAgents] = useState<AgentId[]>([]);
   const [agentStatus, setAgentStatus] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: "assistant",
-      content:
-        "Ask about your behavior, fees, timing, overtrading, or symbol concentration. I will use your cached trader profile, RAG chunks, and sub-agent analysis."
-    }
+    { role: "assistant", content: t.aiCoach.chat.welcome }
   ]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -109,10 +89,20 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
   const [reportError, setReportError] = useState<string | null>(null);
   const storageKey = `trader-profile:${sessionId}`;
 
+  // Refresh welcome message when locale changes
+  useEffect(() => {
+    setMessages((current) => {
+      if (current.length > 0 && current[0].role === "assistant" && !current[0].answer) {
+        const [, ...rest] = current;
+        return [{ role: "assistant", content: t.aiCoach.chat.welcome }, ...rest];
+      }
+      return current;
+    });
+  }, [t.aiCoach.chat.welcome]);
+
   useEffect(() => {
     let cancelled = false;
     const cachedProfile = sessionStorage.getItem(storageKey);
-
     if (cachedProfile) {
       try {
         const parsed = JSON.parse(cachedProfile) as { profile?: TraderProfile };
@@ -129,13 +119,9 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
     async function loadProfile() {
       setProfileLoading(true);
       try {
-        const response = await fetch(`/api/insights/trader-profile?sessionId=${encodeURIComponent(sessionId)}`, {
-          cache: "no-store"
-        });
+        const response = await fetch(`/api/insights/trader-profile?sessionId=${encodeURIComponent(sessionId)}`, { cache: "no-store" });
         const payload = await response.json();
-        if (!response.ok) {
-          throw new Error(payload.error ?? "Trader profile request failed.");
-        }
+        if (!response.ok) throw new Error(payload.error ?? "Trader profile request failed.");
         if (!cancelled) {
           setProfile(payload.profile);
           sessionStorage.setItem(
@@ -149,40 +135,28 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
           );
         }
       } catch {
-        if (!cancelled) {
-          setProfile(null);
-        }
+        if (!cancelled) setProfile(null);
       } finally {
-        if (!cancelled) {
-          setProfileLoading(false);
-        }
+        if (!cancelled) setProfileLoading(false);
       }
     }
-
     void loadProfile();
-
     return () => {
       cancelled = true;
     };
   }, [sessionId]);
 
   useEffect(() => {
-    if (!reportLoading) {
-      return;
-    }
-
+    if (!reportLoading) return;
     const interval = window.setInterval(() => {
       setReportStep((current) => Math.min(current + 1, REPORT_STEPS.length - 1));
     }, 2200);
-
     return () => window.clearInterval(interval);
-  }, [reportLoading]);
+  }, [reportLoading, REPORT_STEPS.length]);
 
   async function ask(nextQuestion = question) {
     const trimmed = nextQuestion.trim();
-    if (!trimmed || loading) {
-      return;
-    }
+    if (!trimmed || loading) return;
 
     setQuestion("");
     setLoading(true);
@@ -191,7 +165,7 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
     setReportError(null);
     setCompletedAgents([]);
     setActiveAgents(["orchestrator", ...predictedAgentsForQuestion(trimmed)]);
-    setAgentStatus("Gemini orchestrator is planning sub-agent work...");
+    setAgentStatus(t.aiCoach.sidebar.planning);
     setMessages((current) => [...current, { role: "user", content: trimmed }]);
 
     try {
@@ -201,9 +175,7 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
         body: JSON.stringify({ sessionId, question: trimmed })
       });
       const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Coach request failed.");
-      }
+      if (!response.ok) throw new Error(payload.error ?? "Coach request failed.");
 
       if (payload.answer?.traderProfile) {
         setProfile(payload.answer.traderProfile);
@@ -218,13 +190,13 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
         );
       }
 
-      const completedAgents = (payload.answer?.subAgentResults ?? [])
+      const completed = (payload.answer?.subAgentResults ?? [])
         .map((result: { agent: string }) => agentFromBackendName(result.agent))
         .filter((agent: AgentId | null): agent is AgentId => Boolean(agent));
-      const uniqueCompletedAgents = [...new Set<AgentId>(["orchestrator", ...completedAgents])];
-      setCompletedAgents(uniqueCompletedAgents);
+      const uniqueCompleted = [...new Set<AgentId>(["orchestrator", ...completed])];
+      setCompletedAgents(uniqueCompleted);
       setActiveAgents([]);
-      setAgentStatus(`Completed ${completedAgents.length || 1} sub-agent checks. Green cards show the agents used in the last run.`);
+      setAgentStatus(t.aiCoach.sidebar.completed(completed.length));
       setMessages((current) => [...current, { role: "assistant", content: payload.answer.answer, answer: payload.answer }]);
     } catch (chatError: unknown) {
       setError(chatError instanceof Error ? chatError.message : "Coach request failed.");
@@ -249,9 +221,7 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
         structuredVersion: answer.structuredVersion
       }));
 
-    if (answers.length === 0 || reportLoading) {
-      return;
-    }
+    if (answers.length === 0 || reportLoading) return;
 
     setReportLoading(true);
     setReportStep(0);
@@ -262,10 +232,7 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
       const response = await fetch("/api/ai-coach/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId,
-          answers
-        })
+        body: JSON.stringify({ sessionId, answers })
       });
 
       if (!response.ok) {
@@ -283,7 +250,7 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
       anchor.remove();
       URL.revokeObjectURL(url);
       setReportStep(REPORT_STEPS.length - 1);
-      setReportMessage("PDF report generated after validator review.");
+      setReportMessage(t.aiCoach.chat.pdfDone);
     } catch (reportGenerationError: unknown) {
       setReportError(reportGenerationError instanceof Error ? reportGenerationError.message : "PDF report generation failed.");
     } finally {
@@ -292,210 +259,238 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
   }
 
   const answerCount = messages.filter((message) => message.answer).length;
+  const steps = t.aiCoach.sidebar.pipelineSteps;
 
   return (
     <div className="grid gap-5 xl:grid-cols-[0.72fr_1.28fr]">
-      <aside className="space-y-5">
-        <Card className="overflow-hidden border-cyan-400/20 bg-cyan-400/[0.04]">
-          <CardHeader className="bg-slate-900/70">
-            <div className="flex items-center gap-3">
-              <UserRoundCog className="h-5 w-5 text-cyan-200" aria-hidden="true" />
+      <aside style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        <Card tone="cyan">
+          <CardHeader>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ padding: 8, borderRadius: 10, border: "1px solid var(--tl-line-strong)", background: "var(--tl-cyan-soft)", color: "var(--tl-cyan)" }}>
+                <UserRoundCog className="h-5 w-5" aria-hidden="true" />
+              </span>
               <div>
-                <h2 className="text-base font-semibold text-white">Trader model</h2>
-                <p className="mt-1 text-xs text-slate-500">Shared with Insights and reused from the session cache.</p>
+                <h2 className="tl-card-title">{t.aiCoach.sidebar.traderModel}</h2>
+                <p className="tl-card-sub" style={{ marginTop: 4 }}>{t.aiCoach.sidebar.traderModelSub}</p>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {profileLoading ? (
-              <div className="flex items-center gap-2 rounded-md border border-cyan-400/20 bg-cyan-400/10 p-3 text-sm text-cyan-100">
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                Loading trader profile...
-              </div>
-            ) : null}
-
-            {profile ? (
-              <>
-                <div className="rounded-md border border-slate-800 bg-slate-950 p-4">
-                  <div className="flex flex-wrap gap-2">
-                    <Badge tone="cyan">
-                      <Sparkles className="mr-1 h-3 w-3" aria-hidden="true" />
-                      {profile.traderType}
-                    </Badge>
-                    <Badge tone={profile.confidence === "high" ? "emerald" : profile.confidence === "medium" ? "amber" : "slate"}>
-                      {profile.confidence} confidence
-                    </Badge>
+          <CardContent>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {profileLoading ? (
+                <div className="tl-notice tl-notice-cyan">
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  <span>{t.aiCoach.sidebar.loadingProfile}</span>
+                </div>
+              ) : null}
+              {profile ? (
+                <>
+                  <div className="tl-panel">
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      <Badge tone="cyan">
+                        <Sparkles className="h-3 w-3" aria-hidden="true" />
+                        {profile.traderType}
+                      </Badge>
+                      <Badge tone={profile.confidence === "high" ? "emerald" : profile.confidence === "medium" ? "amber" : "slate"}>
+                        {t.insights.profile.confidence[profile.confidence]}
+                      </Badge>
+                    </div>
+                    <p style={{ marginTop: 12, fontSize: 13.5, lineHeight: 1.6, color: "var(--tl-ink-2)" }}>{profile.summary}</p>
                   </div>
-                  <p className="mt-3 text-sm leading-6 text-slate-300">{profile.summary}</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {profile.behavioralTags.slice(0, 8).map((tag) => (
-                    <Badge key={tag} tone="slate">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <p className="rounded-md border border-slate-800 bg-slate-950 p-3 text-sm leading-6 text-slate-400">
-                No cached trader profile is available yet. The next coach answer can create one if Gemini is configured.
-              </p>
-            )}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {profile.behavioralTags.slice(0, 8).map((tag) => (
+                      <Badge key={tag} tone="slate">{tag}</Badge>
+                    ))}
+                  </div>
+                </>
+              ) : !profileLoading ? (
+                <p className="tl-panel" style={{ fontSize: 13, lineHeight: 1.6, color: "var(--tl-ink-3)" }}>{t.aiCoach.sidebar.noProfile}</p>
+              ) : null}
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <h2 className="text-base font-semibold text-white">Agentic pipeline</h2>
+            <h2 className="tl-card-title">{t.aiCoach.sidebar.pipeline}</h2>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {agentStatus ? (
-              <div className="rounded-md border border-emerald-400/25 bg-emerald-400/10 px-3 py-2 text-xs font-medium text-emerald-100">
-                {agentStatus}
-              </div>
-            ) : null}
-            <PipelineStep
-              active={activeAgents.includes("orchestrator")}
-              completed={completedAgents.includes("orchestrator")}
-              icon={<Bot className="h-4 w-4" aria-hidden="true" />}
-              title="Gemini orchestrator"
-              detail="Plans the sub-agent work and merges structured outputs."
-            />
-            <PipelineStep
-              active={activeAgents.includes("rag_researcher")}
-              completed={completedAgents.includes("rag_researcher")}
-              icon={<DatabaseZap className="h-4 w-4" aria-hidden="true" />}
-              title="RAG researcher"
-              detail="Retrieves relevant session chunks and uploaded materials."
-            />
-            <PipelineStep
-              active={activeAgents.includes("behavior_analyst")}
-              completed={completedAgents.includes("behavior_analyst")}
-              icon={<BrainCircuit className="h-4 w-4" aria-hidden="true" />}
-              title="Behavior analyst"
-              detail="Checks fees, timing, frequency, and trade discipline metrics."
-            />
-            <PipelineStep
-              active={activeAgents.includes("profile_analyst")}
-              completed={completedAgents.includes("profile_analyst")}
-              icon={<UserRoundCog className="h-4 w-4" aria-hidden="true" />}
-              title="Profile analyst"
-              detail="Connects the answer to your cached trader profile."
-            />
-            <PipelineStep
-              active={activeAgents.includes("revenge_trading_agent")}
-              completed={completedAgents.includes("revenge_trading_agent")}
-              icon={<Flame className="h-4 w-4" aria-hidden="true" />}
-              title="Revenge trading scan"
-              detail="Looks for rapid follow-ups and post-loss escalation clues."
-            />
-            <PipelineStep
-              active={activeAgents.includes("pnl_quality_agent")}
-              completed={completedAgents.includes("pnl_quality_agent")}
-              icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />}
-              title="PnL quality agent"
-              detail="Checks whether success and PnL claims are well supported."
-            />
-            <PipelineStep
-              active={activeAgents.includes("symbol_agent")}
-              completed={completedAgents.includes("symbol_agent")}
-              icon={<Layers3 className="h-4 w-4" aria-hidden="true" />}
-              title="Symbol agent"
-              detail="Reviews concentration, symbol switching, and dominant markets."
-            />
+          <CardContent>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {agentStatus ? <div className="tl-notice tl-notice-green" style={{ fontSize: 12.5 }}>{agentStatus}</div> : null}
+              <PipelineStep
+                active={activeAgents.includes("orchestrator")}
+                completed={completedAgents.includes("orchestrator")}
+                icon={<Bot className="h-4 w-4" aria-hidden="true" />}
+                title={steps.orchestrator.title}
+                detail={steps.orchestrator.detail}
+                usedLabel={t.aiCoach.sidebar.pipelineUsedBadge}
+              />
+              <PipelineStep
+                active={activeAgents.includes("rag_researcher")}
+                completed={completedAgents.includes("rag_researcher")}
+                icon={<DatabaseZap className="h-4 w-4" aria-hidden="true" />}
+                title={steps.rag.title}
+                detail={steps.rag.detail}
+                usedLabel={t.aiCoach.sidebar.pipelineUsedBadge}
+              />
+              <PipelineStep
+                active={activeAgents.includes("behavior_analyst")}
+                completed={completedAgents.includes("behavior_analyst")}
+                icon={<BrainCircuit className="h-4 w-4" aria-hidden="true" />}
+                title={steps.behavior.title}
+                detail={steps.behavior.detail}
+                usedLabel={t.aiCoach.sidebar.pipelineUsedBadge}
+              />
+              <PipelineStep
+                active={activeAgents.includes("profile_analyst")}
+                completed={completedAgents.includes("profile_analyst")}
+                icon={<UserRoundCog className="h-4 w-4" aria-hidden="true" />}
+                title={steps.profile.title}
+                detail={steps.profile.detail}
+                usedLabel={t.aiCoach.sidebar.pipelineUsedBadge}
+              />
+              <PipelineStep
+                active={activeAgents.includes("revenge_trading_agent")}
+                completed={completedAgents.includes("revenge_trading_agent")}
+                icon={<Flame className="h-4 w-4" aria-hidden="true" />}
+                title={steps.revenge.title}
+                detail={steps.revenge.detail}
+                usedLabel={t.aiCoach.sidebar.pipelineUsedBadge}
+              />
+              <PipelineStep
+                active={activeAgents.includes("pnl_quality_agent")}
+                completed={completedAgents.includes("pnl_quality_agent")}
+                icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />}
+                title={steps.pnl.title}
+                detail={steps.pnl.detail}
+                usedLabel={t.aiCoach.sidebar.pipelineUsedBadge}
+              />
+              <PipelineStep
+                active={activeAgents.includes("symbol_agent")}
+                completed={completedAgents.includes("symbol_agent")}
+                icon={<Layers3 className="h-4 w-4" aria-hidden="true" />}
+                title={steps.symbol.title}
+                detail={steps.symbol.detail}
+                usedLabel={t.aiCoach.sidebar.pipelineUsedBadge}
+              />
+            </div>
           </CardContent>
         </Card>
 
         <RiskRadar analytics={analytics} />
 
-        <Card className="border-amber-400/25 bg-amber-400/10">
-          <CardContent className="flex gap-3">
-            <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-200" aria-hidden="true" />
-            <p className="text-sm leading-6 text-amber-100">
-              The coach analyzes behavior only. It must not tell you to buy, sell, or hold any asset.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="tl-notice tl-notice-amber">
+          <ShieldAlert className="h-5 w-5" style={{ flexShrink: 0 }} aria-hidden="true" />
+          <span>{t.aiCoach.sidebar.safety}</span>
+        </div>
       </aside>
 
-      <Card className="overflow-hidden">
-        <CardHeader className="bg-slate-900/70">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-3">
-              <BrainCircuit className="h-5 w-5 text-cyan-200" aria-hidden="true" />
+      <Card>
+        <CardHeader>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }} className="lg:flex-row lg:items-center lg:justify-between">
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ padding: 8, borderRadius: 10, border: "1px solid var(--tl-line-strong)", background: "var(--tl-cyan-soft)", color: "var(--tl-cyan)" }}>
+                <BrainCircuit className="h-5 w-5" aria-hidden="true" />
+              </span>
               <div>
-                <h2 className="text-base font-semibold text-white">AI Trade Coach</h2>
-                <p className="mt-1 text-sm text-slate-500">Structured Gemini agents grounded in analytics chunks and local RAG materials.</p>
+                <h2 className="tl-card-title">{t.aiCoach.chat.title}</h2>
+                <p className="tl-card-sub" style={{ marginTop: 4 }}>{t.aiCoach.chat.sub}</p>
               </div>
             </div>
-            <div className="flex flex-col gap-3 lg:items-end">
-              <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                <MetricChip label="Trades" value={analytics.totalTrades.toLocaleString()} />
-                <MetricChip label="Active days" value={analytics.activeDays.toLocaleString()} />
-                <MetricChip label="PnL confidence" value={analytics.pnlEstimate.confidence} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }} className="lg:items-end">
+              <div className="grid grid-cols-3 gap-2">
+                <MetricChip label={t.aiCoach.chat.stats.trades} value={analytics.totalTrades.toLocaleString()} />
+                <MetricChip label={t.aiCoach.chat.stats.activeDays} value={analytics.activeDays.toLocaleString()} />
+                <MetricChip label={t.aiCoach.chat.stats.pnlConf} value={analytics.pnlEstimate.confidence} />
               </div>
-              <Button type="button" variant="secondary" onClick={generatePdfReport} disabled={reportLoading || answerCount === 0}>
+              <Button variant="secondary" onClick={generatePdfReport} disabled={reportLoading || answerCount === 0}>
                 {reportLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <FileDown className="h-4 w-4" aria-hidden="true" />}
-                Generate PDF
+                {reportLoading ? t.aiCoach.chat.pdfMaking : t.aiCoach.chat.pdf}
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-2">
+        <CardContent>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {SUGGESTED_COACH_QUESTIONS.map((item) => (
               <button
                 key={item}
                 type="button"
                 onClick={() => ask(item)}
-                className="cursor-pointer rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-medium text-slate-300 transition-colors duration-200 hover:border-cyan-400/50 hover:text-cyan-100 focus:outline-none focus:ring-2 focus:ring-cyanData/40"
+                className="tl-chip"
+                style={{ cursor: "pointer", padding: "8px 12px", fontSize: 12, fontFamily: "inherit" }}
               >
                 {item}
               </button>
             ))}
           </div>
 
-          <div className="h-[72vh] min-h-[620px] max-h-[860px] space-y-4 overflow-y-auto rounded-md border border-slate-800 bg-slate-950 p-4">
+          <div
+            style={{
+              marginTop: 18,
+              minHeight: 540,
+              maxHeight: 820,
+              height: "72vh",
+              overflowY: "auto",
+              padding: 16,
+              borderRadius: 14,
+              border: "1px solid var(--tl-line)",
+              background: "rgba(6, 10, 20, 0.55)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 16
+            }}
+          >
             {messages.map((message, index) => (
-              <div key={`${message.role}-${index}`} className={message.role === "user" ? "ml-auto max-w-[86%]" : "mr-auto max-w-[96%]"}>
+              <div
+                key={`${message.role}-${index}`}
+                style={{
+                  alignSelf: message.role === "user" ? "flex-end" : "flex-start",
+                  maxWidth: message.role === "user" ? "86%" : "96%",
+                  width: message.role === "user" ? "auto" : "100%"
+                }}
+              >
                 <div
-                  className={`rounded-lg p-3 text-sm leading-6 ${
-                    message.role === "user" ? "bg-amberTrust text-slate-950" : "border border-slate-800 bg-slate-900 text-slate-200"
-                  }`}
+                  style={{
+                    padding: "12px 14px",
+                    borderRadius: 12,
+                    fontSize: 13.5,
+                    lineHeight: 1.6,
+                    background: message.role === "user" ? "var(--tl-amber)" : "rgba(255, 255, 255, 0.04)",
+                    color: message.role === "user" ? "#1a1106" : "var(--tl-ink)",
+                    border: message.role === "user" ? "1px solid var(--tl-amber)" : "1px solid var(--tl-line)"
+                  }}
                 >
-                  <pre className="whitespace-pre-wrap font-sans">{message.content}</pre>
+                  <pre style={{ whiteSpace: "pre-wrap", margin: 0, fontFamily: "inherit" }}>{message.content}</pre>
                 </div>
 
                 {message.answer?.keyFindings.length ? (
-                  <div className="mt-3 grid gap-2 md:grid-cols-2">
+                  <div className="grid gap-2 md:grid-cols-2" style={{ marginTop: 10 }}>
                     {message.answer.keyFindings.slice(0, 4).map((finding) => (
-                      <div key={`${finding.title}-${finding.evidenceRef ?? ""}`} className="rounded-md border border-slate-800 bg-slate-900/80 p-3">
-                        <Badge tone={finding.severity === "risk" ? "rose" : finding.severity === "warning" ? "amber" : "cyan"}>
-                          {finding.severity}
-                        </Badge>
-                        <p className="mt-2 text-sm font-semibold text-white">{finding.title}</p>
-                        <p className="mt-1 text-xs leading-5 text-slate-400">{finding.detail}</p>
+                      <div key={`${finding.title}-${finding.evidenceRef ?? ""}`} className="tl-panel">
+                        <Badge tone={finding.severity === "risk" ? "rose" : finding.severity === "warning" ? "amber" : "cyan"}>{finding.severity}</Badge>
+                        <p style={{ marginTop: 8, fontSize: 13, fontWeight: 600, color: "var(--tl-ink)" }}>{finding.title}</p>
+                        <p style={{ marginTop: 4, fontSize: 12, lineHeight: 1.55, color: "var(--tl-ink-3)" }}>{finding.detail}</p>
                       </div>
                     ))}
                   </div>
                 ) : null}
 
                 {message.answer?.subAgentResults.length ? (
-                  <div className="mt-3 rounded-md border border-violet-400/20 bg-violet-400/10 p-3">
-                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-violet-200">
+                  <div className="tl-panel tl-tone-violet" style={{ marginTop: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#E0D3FF" }}>
                       <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-                      Sub-agent trace
+                      {t.aiCoach.chat.subAgentTrace}
                     </div>
-                    <div className="mt-3 grid gap-2">
+                    <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
                       {message.answer.subAgentResults.map((result) => (
-                        <div key={result.id} className="rounded-md border border-slate-800 bg-slate-950/80 p-3">
-                          <div className="flex flex-wrap items-center gap-2">
+                        <div key={result.id} className="tl-panel" style={{ background: "rgba(6, 10, 20, 0.55)" }}>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                             <Badge tone="slate">{result.agent}</Badge>
-                            <Badge tone={result.confidence === "high" ? "emerald" : result.confidence === "medium" ? "amber" : "slate"}>
-                              {result.confidence}
-                            </Badge>
+                            <Badge tone={result.confidence === "high" ? "emerald" : result.confidence === "medium" ? "amber" : "slate"}>{result.confidence}</Badge>
                           </div>
-                          <p className="mt-2 text-xs leading-5 text-slate-300">{result.result}</p>
+                          <p style={{ marginTop: 8, fontSize: 12, lineHeight: 1.55, color: "var(--tl-ink-2)" }}>{result.result}</p>
                         </div>
                       ))}
                     </div>
@@ -503,14 +498,11 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
                 ) : null}
 
                 {message.answer?.evidence.length ? (
-                  <div className="mt-3 grid gap-2">
+                  <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
                     {message.answer.evidence.slice(0, 4).map((item, evidenceIndex) => (
-                      <div
-                        key={`${message.role}-${index}-${item.sourceRef}-${item.title}-${evidenceIndex}`}
-                        className="rounded-md border border-cyan-400/20 bg-cyan-400/10 p-3"
-                      >
-                        <p className="text-xs font-semibold uppercase tracking-wide text-cyan-200">{item.title}</p>
-                        <p className="mt-1 line-clamp-3 text-xs leading-5 text-slate-400">{item.detail}</p>
+                      <div key={`${message.role}-${index}-${item.sourceRef}-${item.title}-${evidenceIndex}`} className="tl-panel tl-tone-cyan">
+                        <p className="tl-label-mono" style={{ color: "rgba(91, 224, 230, 0.9)" }}>{item.title}</p>
+                        <p style={{ marginTop: 4, fontSize: 12, lineHeight: 1.5, color: "var(--tl-ink-3)", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{item.detail}</p>
                       </div>
                     ))}
                   </div>
@@ -518,37 +510,30 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
               </div>
             ))}
             {loading ? (
-              <div className="flex items-center gap-2 rounded-md border border-cyan-400/20 bg-cyan-400/10 p-3 text-sm text-cyan-100">
+              <div className="tl-notice tl-notice-cyan">
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                Gemini orchestrator is assigning sub-agents and retrieving evidence...
+                <span>{t.aiCoach.chat.thinking}</span>
               </div>
             ) : null}
           </div>
 
-          {error ? <div className="rounded-md border border-rose-400/30 bg-rose-400/10 p-3 text-sm text-rose-100">{error}</div> : null}
+          {error ? <div className="tl-notice tl-notice-red" style={{ marginTop: 14 }}>{error}</div> : null}
           {reportLoading || reportMessage || reportError ? (
-            <div
-              className={`rounded-md border p-3 text-sm ${
-                reportError
-                  ? "border-rose-400/30 bg-rose-400/10 text-rose-100"
-                  : "border-emerald-400/25 bg-emerald-400/10 text-emerald-100"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                {reportLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                ) : reportError ? (
-                  <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-                ) : (
-                  <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-                )}
-                <span>{reportLoading ? REPORT_STEPS[reportStep] : reportError ?? reportMessage}</span>
-              </div>
+            <div className={`tl-notice ${reportError ? "tl-notice-red" : "tl-notice-green"}`} style={{ marginTop: 14 }}>
+              {reportLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : reportError ? (
+                <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+              )}
+              <span>{reportLoading ? REPORT_STEPS[reportStep] : reportError ?? reportMessage}</span>
             </div>
           ) : null}
 
           <form
-            className="flex flex-col gap-3 sm:flex-row"
+            style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}
+            className="sm:flex-row"
             onSubmit={(event) => {
               event.preventDefault();
               ask();
@@ -556,13 +541,14 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
           >
             <input
               value={question}
-              onChange={(event) => setQuestion(event.target.value)}
-              placeholder="Ask about mistakes, trader type, late hours, fees, discipline..."
-              className="min-h-11 flex-1 rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-white outline-none transition-colors duration-200 placeholder:text-slate-500 focus:border-cyanData focus:ring-2 focus:ring-cyanData/30"
+              onChange={(e) => setQuestion(e.target.value)}
+              placeholder={t.aiCoach.chat.placeholder}
+              className="tl-input"
+              style={{ flex: 1 }}
             />
             <Button type="submit" disabled={loading || !question.trim()}>
               <Send className="h-4 w-4" aria-hidden="true" />
-              Ask
+              {t.aiCoach.chat.send}
             </Button>
           </form>
         </CardContent>
@@ -573,9 +559,17 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
 
 function MetricChip({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-slate-800 bg-slate-950 px-3 py-2">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 text-xs font-semibold text-white">{value}</p>
+    <div
+      style={{
+        padding: "6px 10px",
+        borderRadius: 10,
+        border: "1px solid var(--tl-line)",
+        background: "rgba(6, 10, 20, 0.55)",
+        textAlign: "center"
+      }}
+    >
+      <p className="tl-label-mono" style={{ fontSize: 10 }}>{label}</p>
+      <p style={{ marginTop: 2, fontSize: 12, fontWeight: 600, color: "var(--tl-ink)" }}>{value}</p>
     </div>
   );
 }
@@ -585,84 +579,134 @@ function PipelineStep({
   title,
   detail,
   active,
-  completed
+  completed,
+  usedLabel
 }: {
   icon: ReactNode;
   title: string;
   detail: string;
   active?: boolean;
   completed?: boolean;
+  usedLabel: string;
 }) {
   const highlighted = active || completed;
-
   return (
     <div
-      className={`flex gap-3 rounded-md border p-3 transition-all duration-300 ${
-        highlighted ? "border-emerald-400/40 bg-emerald-400/10 shadow-[0_0_24px_rgba(52,211,153,0.16)]" : "border-slate-800 bg-slate-900"
-      }`}
+      style={{
+        display: "flex",
+        gap: 10,
+        padding: 12,
+        borderRadius: 12,
+        border: `1px solid ${highlighted ? "rgba(91, 213, 160, 0.42)" : "var(--tl-line)"}`,
+        background: highlighted ? "rgba(91, 213, 160, 0.08)" : "var(--tl-panel-2)",
+        boxShadow: highlighted ? "0 0 24px rgba(91, 213, 160, 0.14)" : "none",
+        transition: "all 0.3s ease"
+      }}
     >
       <div
-        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-all duration-300 ${
-          active
-            ? "animate-pulse border-emerald-300/50 bg-emerald-400/15 text-emerald-200"
-            : completed
-              ? "border-emerald-300/50 bg-emerald-400/15 text-emerald-200"
-              : "border-cyan-400/20 bg-cyan-400/10 text-cyan-200"
-        }`}
+        style={{
+          display: "flex",
+          width: 32,
+          height: 32,
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+          borderRadius: 9,
+          border: `1px solid ${active ? "rgba(91, 213, 160, 0.55)" : completed ? "rgba(91, 213, 160, 0.45)" : "rgba(91, 224, 230, 0.25)"}`,
+          background: active ? "rgba(91, 213, 160, 0.15)" : completed ? "rgba(91, 213, 160, 0.15)" : "rgba(91, 224, 230, 0.1)",
+          color: highlighted ? "var(--tl-green)" : "var(--tl-cyan)",
+          animation: active ? "tl-pulse 2s infinite" : undefined
+        }}
       >
         {icon}
       </div>
-      <div>
-        <div className="flex flex-wrap items-center gap-2">
-          <p className={`text-sm font-semibold ${highlighted ? "text-emerald-100" : "text-white"}`}>{title}</p>
-          {completed ? <span className="rounded-md border border-emerald-400/25 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-200">used</span> : null}
+      <div style={{ minWidth: 0 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: highlighted ? "#C8F4DC" : "var(--tl-ink)", margin: 0 }}>{title}</p>
+          {completed ? (
+            <span
+              style={{
+                padding: "1px 6px",
+                borderRadius: 6,
+                border: "1px solid rgba(91, 213, 160, 0.32)",
+                background: "rgba(91, 213, 160, 0.12)",
+                fontSize: 10,
+                fontWeight: 600,
+                color: "var(--tl-green)"
+              }}
+            >
+              {usedLabel}
+            </span>
+          ) : null}
         </div>
-        <p className="mt-1 text-xs leading-5 text-slate-400">{detail}</p>
+        <p style={{ marginTop: 4, fontSize: 12, lineHeight: 1.5, color: "var(--tl-ink-3)" }}>{detail}</p>
       </div>
     </div>
   );
 }
 
 function RiskRadar({ analytics }: { analytics: AnalyticsData }) {
+  const t = useT();
   const insights = analytics.generatedInsights.slice(0, 5);
-
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="bg-slate-900/70">
-        <div className="flex items-center gap-3">
-          <Activity className="h-5 w-5 text-amber-200" aria-hidden="true" />
+    <Card>
+      <CardHeader>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ padding: 8, borderRadius: 10, border: "1px solid var(--tl-line-strong)", background: "var(--tl-amber-soft)", color: "var(--tl-amber)" }}>
+            <Activity className="h-5 w-5" aria-hidden="true" />
+          </span>
           <div>
-            <h2 className="text-base font-semibold text-white">Behavior risk radar</h2>
-            <p className="mt-1 text-xs text-slate-500">Ranked deterministic signals before the coach adds context.</p>
+            <h2 className="tl-card-title">{t.aiCoach.sidebar.radarTitle}</h2>
+            <p className="tl-card-sub" style={{ marginTop: 4 }}>{t.aiCoach.sidebar.radarSub}</p>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {insights.map((insight, index) => {
-          const tone = insight.severity === "risk" ? "rose" : insight.severity === "warning" ? "amber" : "cyan";
-          return (
-            <div key={insight.id} className="relative overflow-hidden rounded-md border border-slate-800 bg-slate-900/80 p-3">
-              <div
-                className={`absolute left-0 top-0 h-full w-1 ${
-                  insight.severity === "risk" ? "bg-rose-300" : insight.severity === "warning" ? "bg-amber-300" : "bg-cyan-300"
-                }`}
-              />
-              <div className="ml-2 flex items-start justify-between gap-3">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge tone={tone}>#{index + 1}</Badge>
-                    <Badge tone="slate">{insight.category}</Badge>
+      <CardContent>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {insights.map((insight, index) => {
+            const tone = insight.severity === "risk" ? "rose" : insight.severity === "warning" ? "amber" : "cyan";
+            return (
+              <div key={insight.id} className="tl-panel" style={{ position: "relative", overflow: "hidden", paddingLeft: 14 }}>
+                <div
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    width: 3,
+                    height: "100%",
+                    background: insight.severity === "risk" ? "var(--tl-red)" : insight.severity === "warning" ? "var(--tl-amber)" : "var(--tl-cyan)"
+                  }}
+                />
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
+                      <Badge tone={tone}>#{index + 1}</Badge>
+                      <Badge tone="slate">{insight.category}</Badge>
+                    </div>
+                    <p style={{ marginTop: 8, fontSize: 13, fontWeight: 600, color: "var(--tl-ink)" }}>{insight.title}</p>
+                    <p style={{ marginTop: 4, fontSize: 12, lineHeight: 1.55, color: "var(--tl-ink-3)", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{insight.message}</p>
                   </div>
-                  <p className="mt-2 text-sm font-semibold text-white">{insight.title}</p>
-                  <p className="mt-1 line-clamp-3 text-xs leading-5 text-slate-400">{insight.message}</p>
-                </div>
-                <div className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                  {insight.evidence.length} refs
+                  <div
+                    style={{
+                      flexShrink: 0,
+                      padding: "3px 8px",
+                      borderRadius: 6,
+                      border: "1px solid var(--tl-line)",
+                      background: "rgba(6, 10, 20, 0.6)",
+                      fontSize: 10,
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                      color: "var(--tl-ink-3)"
+                    }}
+                  >
+                    {t.aiCoach.sidebar.radarRefs(insight.evidence.length)}
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </CardContent>
     </Card>
   );

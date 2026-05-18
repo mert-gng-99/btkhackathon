@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Inter_Tight, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
+import { I18nProvider } from "@/lib/i18n";
 
 const interTight = Inter_Tight({
   subsets: ["latin"],
@@ -19,15 +20,18 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TradeLens — See how you actually trade",
-  description: "Secure, read-only Binance trade behavior analytics with a grounded AI Coach. Spot, USD-M Futures, and COIN-M Futures."
+  title: "TradeLens — See how you really trade",
+  description:
+    "Safe, read-only Binance trade view with a smart AI coach. Spot, USD-M Futures, and COIN-M Futures."
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en" className={`${interTight.variable} ${jetbrainsMono.variable}`}>
       <body>
-        <AppShell>{children}</AppShell>
+        <I18nProvider defaultLocale="en">
+          <AppShell>{children}</AppShell>
+        </I18nProvider>
       </body>
     </html>
   );

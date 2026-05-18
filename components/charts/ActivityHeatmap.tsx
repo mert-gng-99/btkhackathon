@@ -1,48 +1,59 @@
 "use client";
 
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
+import { useT } from "@/lib/i18n";
 import type { AnalyticsData } from "@/types";
 
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
 function intensity(count: number, max: number): string {
-  if (count === 0 || max === 0) {
-    return "bg-slate-900";
-  }
+  if (count === 0 || max === 0) return "rgba(255, 255, 255, 0.02)";
   const ratio = count / max;
-  if (ratio > 0.75) return "bg-amber-300";
-  if (ratio > 0.5) return "bg-cyan-300";
-  if (ratio > 0.25) return "bg-cyan-600";
-  return "bg-slate-600";
+  if (ratio > 0.75) return "rgba(245, 181, 68, 0.9)";
+  if (ratio > 0.5) return "rgba(91, 224, 230, 0.85)";
+  if (ratio > 0.25) return "rgba(91, 224, 230, 0.45)";
+  return "rgba(91, 224, 230, 0.18)";
 }
 
 export function ActivityHeatmap({ analytics }: { analytics: AnalyticsData }) {
+  const t = useT();
   const max = Math.max(...analytics.heatmap.map((point) => point.trades), 0);
+  const days = t.charts.days;
 
   return (
     <Card>
       <CardHeader>
-        <h2 className="text-base font-semibold text-white">Activity heatmap by UTC day and hour</h2>
+        <h2 className="tl-card-title">{t.charts.heatmapTitle}</h2>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
-          <div className="grid min-w-[760px] grid-cols-[52px_repeat(24,minmax(22px,1fr))] gap-1">
+        <div style={{ overflowX: "auto" }}>
+          <div
+            style={{
+              display: "grid",
+              minWidth: 760,
+              gridTemplateColumns: "52px repeat(24, minmax(22px, 1fr))",
+              gap: 4
+            }}
+          >
             <div />
             {Array.from({ length: 24 }, (_, hour) => (
-              <div key={hour} className="text-center text-[10px] text-slate-500">
+              <div key={hour} style={{ textAlign: "center", fontSize: 10, color: "var(--tl-ink-3)" }}>
                 {hour}
               </div>
             ))}
-            {DAYS.map((day, dayIndex) => (
-              <div className="contents" key={day}>
-                <div className="flex items-center text-xs text-slate-500">{day}</div>
+            {days.map((day, dayIndex) => (
+              <div style={{ display: "contents" }} key={day}>
+                <div style={{ display: "flex", alignItems: "center", fontSize: 11, color: "var(--tl-ink-3)" }}>{day}</div>
                 {Array.from({ length: 24 }, (_, hour) => {
                   const point = analytics.heatmap.find((item) => item.dayOfWeek === dayIndex && item.hour === hour);
                   return (
                     <div
                       key={`${day}-${hour}`}
-                      title={`${day} ${hour}:00 UTC - ${point?.trades ?? 0} trades`}
-                      className={`h-5 rounded-sm border border-slate-800 ${intensity(point?.trades ?? 0, max)}`}
+                      title={`${day} ${hour}:00 UTC · ${point?.trades ?? 0}`}
+                      style={{
+                        height: 20,
+                        borderRadius: 4,
+                        border: "1px solid rgba(255, 255, 255, 0.05)",
+                        background: intensity(point?.trades ?? 0, max)
+                      }}
                     />
                   );
                 })}
@@ -54,4 +65,3 @@ export function ActivityHeatmap({ analytics }: { analytics: AnalyticsData }) {
     </Card>
   );
 }
-

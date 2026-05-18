@@ -13,17 +13,9 @@ export function Input({ className, label, hint, id, ...props }: InputProps) {
 
   return (
     <label htmlFor={inputId} className="block">
-      <span className="mb-2 block text-sm font-medium text-slate-200">{label}</span>
-      <input
-        id={inputId}
-        className={cn(
-          "w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none transition-colors duration-200 placeholder:text-slate-500 focus:border-cyanData focus:ring-2 focus:ring-cyanData/30",
-          className
-        )}
-        {...props}
-      />
-      {hint ? <span className="mt-1 block text-xs text-slate-500">{hint}</span> : null}
+      <span className="tl-label">{label}</span>
+      <input id={inputId} className={cn("tl-input", className)} {...props} />
+      {hint ? <span className="tl-hint">{hint}</span> : null}
     </label>
   );
 }
-

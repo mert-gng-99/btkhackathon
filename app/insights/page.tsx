@@ -6,23 +6,23 @@ import { SessionGate } from "@/components/session/SessionGate";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { useSessionData } from "@/hooks/useSessionData";
+import { useT } from "@/lib/i18n";
 
 export default function InsightsPage() {
   const { session, loading, error } = useSessionData();
+  const t = useT();
 
   if (loading || error || !session) {
     return <SessionGate loading={loading} error={error} />;
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Badge tone="amber">Deterministic and evidence-backed</Badge>
-        <h1 className="mt-3 text-3xl font-semibold text-white">Insights</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-          Gemini generates the trader profile from your metrics. Rule-based insight cards remain deterministic and evidence-backed.
-        </p>
-      </div>
+    <>
+      <section className="tl-hero">
+        <span className="tl-eyebrow"><span className="tl-pulse" />{t.insights.badge}</span>
+        <h1 className="tl-display">{t.insights.title}</h1>
+        <p className="tl-sub">{t.insights.intro}</p>
+      </section>
 
       <TraderProfileCard sessionId={session.id} />
 
@@ -30,19 +30,21 @@ export default function InsightsPage() {
         {session.analytics.generatedInsights.map((insight) => (
           <Card key={insight.id}>
             <CardHeader>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <Lightbulb className="h-5 w-5 text-amber-200" aria-hidden="true" />
-                  <h2 className="text-base font-semibold text-white">{insight.title}</h2>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ padding: 6, borderRadius: 8, border: "1px solid var(--tl-line-strong)", background: "var(--tl-amber-soft)", color: "var(--tl-amber)" }}>
+                    <Lightbulb className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                  <h2 className="tl-card-title">{insight.title}</h2>
                 </div>
                 <Badge tone={insight.severity === "risk" ? "rose" : insight.severity === "warning" ? "amber" : "slate"}>{insight.severity}</Badge>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm leading-6 text-slate-300">{insight.message}</p>
-              <div className="mt-4 space-y-2">
+              <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--tl-ink-2)" }}>{insight.message}</p>
+              <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 8 }}>
                 {insight.evidence.map((item) => (
-                  <div key={item} className="rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-slate-400">
+                  <div key={item} className="tl-panel" style={{ padding: "8px 12px", fontSize: 12.5, color: "var(--tl-ink-3)" }}>
                     {item}
                   </div>
                 ))}
@@ -51,6 +53,6 @@ export default function InsightsPage() {
           </Card>
         ))}
       </section>
-    </div>
+    </>
   );
 }
