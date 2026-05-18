@@ -11,6 +11,16 @@ A secure, read-only Binance Spot trade analytics dashboard built with Next.js, T
 - No trading, withdrawal, transfer, or account-modifying Binance endpoints are implemented.
 - Logs and errors must not include API secrets.
 
+## Trade Coverage
+
+Binance Spot `myTrades` requires a `symbol`, so the app cannot fetch every trade with one global request. The connect page now supports:
+
+- Full market scan: discovers active Spot symbols from `exchangeInfo` and scans them one by one.
+- Broad quote scan: scans symbols for selected quote assets such as USDT, BTC, BNB, and TRY.
+- Quick selected scan: scans only chosen symbols for faster tests.
+
+Full scan has the best coverage but can take several minutes on real accounts.
+
 ## Quick Start
 
 ```bash

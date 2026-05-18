@@ -9,7 +9,7 @@ export function toMonthKey(date: Date): string {
 }
 
 export function defaultStartTime(): number {
-  const lookbackDays = Number(process.env.SYNC_LOOKBACK_DAYS ?? "365");
+  const lookbackDays = Number(process.env.SYNC_LOOKBACK_DAYS ?? "3650");
   return Date.now() - lookbackDays * MS_PER_DAY;
 }
 
@@ -21,4 +21,3 @@ export function formatDateTime(value: string): string {
     minute: "2-digit"
   }).format(new Date(value));
 }
-
