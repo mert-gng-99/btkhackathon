@@ -47,6 +47,7 @@ model Trade {
   id            String   @id @default(cuid())
   sessionId     String
   exchange      String   @default("binance")
+  marketType    String   @default("spot")
   symbol        String
   orderId       String
   tradeId       String
@@ -59,12 +60,14 @@ model Trade {
   timestamp     DateTime
   isBuyer       Boolean
   isMaker       Boolean
+  realizedPnl   Decimal?
+  positionSide  String?
 
   session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId, timestamp])
   @@index([sessionId, symbol])
-  @@unique([sessionId, exchange, symbol, tradeId])
+  @@unique([sessionId, exchange, marketType, symbol, tradeId])
 }
 
 model AnalyticsSnapshot {

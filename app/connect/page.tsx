@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { cn } from "@/lib/utils/cn";
+import type { MarketType, SyncJob } from "@/types";
 
 const COMMON_SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT", "DOGEUSDT", "AVAXUSDT"];
 const QUOTE_ASSETS = ["USDT", "USDC", "FDUSD", "BTC", "ETH", "BNB", "TRY", "EUR", "TUSD", "BUSD"];
@@ -36,15 +37,15 @@ const SCAN_MODES: Array<{
   {
     id: "all",
     title: "Full market scan",
-    detail: "Scans every active Binance Spot symbol from exchangeInfo. Slowest, best coverage.",
+    detail: "Scans every discovered Spot/Futures symbol. Slowest, maximum coverage.",
     meta: "Best for complete history",
     icon: Radar
   },
   {
     id: "quoteAssets",
     title: "Broad quote scan",
-    detail: "Scans symbols that end with selected quote assets such as USDT, BTC, BNB, and TRY.",
-    meta: "Balanced coverage",
+    detail: "Fast scan using active Futures symbols, priority pairs, and selected quote assets.",
+    meta: "Fast balanced mode",
     icon: Layers3
   },
   {
@@ -62,20 +63,23 @@ export default function ConnectPage() {
   const [apiSecret, setApiSecret] = useState("");
   const [selectedSymbols, setSelectedSymbols] = useState(COMMON_SYMBOLS.slice(0, 5));
   const [quoteAssets, setQuoteAssets] = useState(QUOTE_ASSETS.slice(0, 8));
-  const [scanMode, setScanMode] = useState<ScanMode>("all");
+  const [scanMode, setScanMode] = useState<ScanMode>("quoteAssets");
+  const [includeMarkets, setIncludeMarkets] = useState<MarketType[]>(["spot", "um_futures"]);
   const [lookbackDays, setLookbackDays] = useState(3650);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [syncJob, setSyncJob] = useState<SyncJob | null>(null);
 
   const startTime = useMemo(() => Date.now() - lookbackDays * 24 * 60 * 60 * 1000, [lookbackDays]);
   const loadingCopy =
     scanMode === "all"
       ? "Full market scan is running. This can take a few minutes because Binance requires symbol-by-symbol trade queries."
       : scanMode === "quoteAssets"
-        ? "Broad quote scan is running across discovered Spot symbols."
+        ? "Broad quote scan is running across discovered Spot/Futures symbols."
         : "Selected symbols are being scanned.";
+  const progressPercent = syncJob && syncJob.progress.totalSymbols > 0 ? Math.round((syncJob.progress.scannedSymbols / syncJob.progress.totalSymbols) * 100) : 0;
 
   function toggleSymbol(symbol: string) {
     setSelectedSymbols((current) => (current.includes(symbol) ? current.filter((item) => item !== symbol) : [...current, symbol]));
@@ -83,6 +87,10 @@ export default function ConnectPage() {
 
   function toggleQuoteAsset(asset: string) {
     setQuoteAssets((current) => (current.includes(asset) ? current.filter((item) => item !== asset) : [...current, asset]));
+  }
+
+  function toggleMarket(market: MarketType) {
+    setIncludeMarkets((current) => (current.includes(market) ? current.filter((item) => item !== market) : [...current, market]));
   }
 
   async function validateOnly() {
@@ -118,6 +126,7 @@ export default function ConnectPage() {
     setError(null);
     setStatus(loadingCopy);
     setWarnings([]);
+    setSyncJob(null);
 
     try {
       const response = await fetch("/api/binance/sync", {
@@ -127,6 +136,7 @@ export default function ConnectPage() {
           apiKey,
           apiSecret,
           scanMode,
+          includeMarkets,
           quoteAssets,
           symbols: selectedSymbols,
           startTime
@@ -136,14 +146,42 @@ export default function ConnectPage() {
       if (!response.ok) {
         throw new Error(payload.error ?? "Sync failed.");
       }
-      window.localStorage.setItem("tradeAnalyticsSessionId", payload.sessionId);
-      setApiSecret("");
-      setWarnings(payload.warnings ?? []);
-      router.push("/dashboard");
+      await pollJob(payload.jobId);
     } catch (syncError: unknown) {
       setError(syncError instanceof Error ? syncError.message : "Sync failed.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function pollJob(jobId: string) {
+    for (;;) {
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      const response = await fetch(`/api/binance/sync/jobs/${jobId}`, { cache: "no-store" });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Could not read sync progress.");
+      }
+
+      const job = payload.job as SyncJob;
+      setSyncJob(job);
+      setWarnings(job.warnings ?? []);
+      setStatus(job.progress.message);
+
+      if (job.status === "failed") {
+        throw new Error(job.error ?? "Sync failed.");
+      }
+
+      if (job.status === "completed") {
+        if (!job.sessionId) {
+          throw new Error("Sync completed without a session.");
+        }
+        window.localStorage.setItem("tradeAnalyticsSessionId", job.sessionId);
+        setApiSecret("");
+        router.push("/dashboard");
+        return;
+      }
     }
   }
 
@@ -176,7 +214,7 @@ export default function ConnectPage() {
           <div>
             <h1 className="text-4xl font-semibold tracking-tight text-white">Connect Binance safely</h1>
             <p className="mt-3 max-w-2xl text-base leading-7 text-slate-300">
-              Use a read-only Binance key to scan Spot trade history. For full coverage, the app discovers active Spot symbols and queries them one by one because Binance does not provide a global all-trades endpoint.
+              Use a read-only Binance key to scan Spot, USD-M Futures, and COIN-M Futures history. The app only calls GET history endpoints; it never sends orders, transfers, or account changes.
             </p>
           </div>
 
@@ -217,7 +255,7 @@ export default function ConnectPage() {
             <CardContent className="flex gap-3">
               <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-200" aria-hidden="true" />
               <p className="text-sm leading-6 text-amber-100">
-                Full coverage is slower because Binance requires `symbol` for account trade history. Keep the browser open while the scan runs.
+                Binance Spot and Futures trade-list endpoints require symbol-by-symbol scans. Progress is shown while the job runs; Futures history is limited by Binance endpoint windows.
               </p>
             </CardContent>
           </Card>
@@ -228,7 +266,7 @@ export default function ConnectPage() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-semibold text-white">Analyze once without saving keys</h2>
-                <p className="mt-1 text-sm text-slate-500">Full scan mode is selected by default for maximum trade coverage.</p>
+              <p className="mt-1 text-sm text-slate-500">Broad scan is selected by default for speed. Full scan is available when you need exhaustive coverage.</p>
               </div>
               <KeyRound className="h-6 w-6 text-cyan-200" aria-hidden="true" />
             </div>
@@ -253,8 +291,37 @@ export default function ConnectPage() {
               max={3650}
               value={lookbackDays}
               onChange={(event) => setLookbackDays(Number(event.target.value))}
-              hint="3650 days covers roughly 10 years of Spot history."
+              hint="Spot can scan long ranges. USD-M Futures user trade history is limited by Binance to the past 6 months."
             />
+
+            <div>
+              <p className="mb-3 text-sm font-medium text-slate-200">Markets to include</p>
+              <div className="grid gap-3 md:grid-cols-3">
+                {[
+                  ["spot", "Spot", "Historical spot fills and fees"],
+                  ["um_futures", "USD-M Futures", "USDT/USDC margined futures fills and realized PnL"],
+                  ["coin_futures", "COIN-M Futures", "Coin-margined futures fills and realized PnL"]
+                ].map(([id, label, detail]) => {
+                  const selected = includeMarkets.includes(id as MarketType);
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => toggleMarket(id as MarketType)}
+                      className={cn(
+                        "cursor-pointer rounded-lg border p-4 text-left transition-colors duration-200",
+                        selected
+                          ? "border-amber-400/50 bg-amber-400/10 text-white"
+                          : "border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-600 hover:text-white"
+                      )}
+                    >
+                      <p className="text-sm font-semibold">{label}</p>
+                      <p className="mt-2 text-xs leading-5 text-slate-500">{detail}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
             <div>
               <p className="mb-3 text-sm font-medium text-slate-200">Scan coverage</p>
@@ -339,9 +406,23 @@ export default function ConnectPage() {
             </div>
 
             {loading ? (
-              <div className="flex items-start gap-3 rounded-md border border-cyan-400/25 bg-cyan-400/10 p-3 text-sm text-cyan-100">
-                <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
-                <span>{loadingCopy}</span>
+              <div className="rounded-lg border border-cyan-400/25 bg-cyan-400/10 p-4 text-sm text-cyan-100">
+                <div className="flex items-start gap-3">
+                  <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium">{syncJob?.progress.message ?? loadingCopy}</p>
+                    {syncJob ? (
+                      <p className="mt-1 text-xs text-cyan-100/75">
+                        {syncJob.progress.scannedSymbols}/{syncJob.progress.totalSymbols || "..."} symbols · {syncJob.progress.symbolsWithTrades} symbols with trades · {syncJob.progress.tradesFound} trades found
+                        {syncJob.progress.currentSymbol ? ` · Current: ${syncJob.progress.currentSymbol}` : ""}
+                      </p>
+                    ) : null}
+                  </div>
+                  {syncJob ? <span className="numeric text-sm font-semibold">{progressPercent}%</span> : null}
+                </div>
+                <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-950">
+                  <div className="h-full rounded-full bg-gradient-to-r from-cyan-300 to-amber-300 transition-all duration-300" style={{ width: `${progressPercent}%` }} />
+                </div>
               </div>
             ) : null}
             {error ? <div className="rounded-md border border-rose-400/30 bg-rose-400/10 p-3 text-sm text-rose-100">{error}</div> : null}
@@ -362,7 +443,7 @@ export default function ConnectPage() {
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <ShieldCheck className="h-4 w-4" aria-hidden="true" />}
                 Validate
               </Button>
-              <Button type="button" onClick={syncTrades} disabled={loading || !apiKey || !apiSecret || (scanMode === "selected" && selectedSymbols.length === 0)}>
+              <Button type="button" onClick={syncTrades} disabled={loading || !apiKey || !apiSecret || includeMarkets.length === 0 || (scanMode === "selected" && selectedSymbols.length === 0)}>
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Sparkles className="h-4 w-4" aria-hidden="true" />}
                 Analyze
               </Button>
@@ -377,4 +458,3 @@ export default function ConnectPage() {
     </div>
   );
 }
-

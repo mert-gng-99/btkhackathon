@@ -1,5 +1,7 @@
 export type Exchange = "binance";
 
+export type MarketType = "spot" | "um_futures" | "coin_futures";
+
 export type TradeSide = "BUY" | "SELL";
 
 export type InsightSeverity = "info" | "warning" | "risk";
@@ -10,6 +12,7 @@ export interface NormalizedTrade {
   id: string;
   sessionId: string;
   exchange: Exchange;
+  marketType: MarketType;
   symbol: string;
   orderId: string;
   tradeId: string;
@@ -22,6 +25,8 @@ export interface NormalizedTrade {
   timestamp: string;
   isBuyer: boolean;
   isMaker: boolean;
+  realizedPnl?: number;
+  positionSide?: string;
 }
 
 export interface FeeSummary {
@@ -90,6 +95,11 @@ export interface AnalyticsData {
   };
   feesByAsset: FeeSummary[];
   quoteFeeEstimate: number;
+  marketBreakdown: Array<{
+    marketType: MarketType;
+    trades: number;
+    volume: number;
+  }>;
   mostTradedSymbols: SymbolSummary[];
   symbolSummaries: SymbolSummary[];
   activityByDate: ActivityPoint[];
@@ -152,3 +162,23 @@ export interface StoredSession {
   warnings: string[];
 }
 
+export interface SyncJobProgress {
+  totalSymbols: number;
+  scannedSymbols: number;
+  symbolsWithTrades: number;
+  tradesFound: number;
+  currentMarket?: MarketType;
+  currentSymbol?: string;
+  message: string;
+}
+
+export interface SyncJob {
+  id: string;
+  status: "queued" | "running" | "completed" | "failed";
+  createdAt: string;
+  updatedAt: string;
+  progress: SyncJobProgress;
+  sessionId?: string;
+  error?: string;
+  warnings: string[];
+}

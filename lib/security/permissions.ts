@@ -20,7 +20,6 @@ export function validateReadOnlyPermissions(restrictions: BinanceApiRestrictions
     ["enableInternalTransfer", "Internal Transfer"],
     ["permitsUniversalTransfer", "Universal Transfer"],
     ["enableMargin", "Margin"],
-    ["enableFutures", "Futures"],
     ["enableVanillaOptions", "Vanilla Options"],
     ["enableFixApiTrade", "FIX API Trade"],
     ["enablePortfolioMarginTrading", "Portfolio Margin Trading"]
@@ -34,6 +33,10 @@ export function validateReadOnlyPermissions(restrictions: BinanceApiRestrictions
 
   if (restrictions.ipRestrict === false) {
     warnings.push("This API key is not restricted to trusted IPs. Read-only analysis can continue, but IP restriction is safer when you deploy.");
+  }
+
+  if (restrictions.enableFutures === true) {
+    warnings.push("Futures API access is enabled. This app only calls GET history endpoints and never sends futures order or account-modifying requests.");
   }
 
   return {

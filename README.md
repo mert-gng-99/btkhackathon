@@ -13,13 +13,15 @@ A secure, read-only Binance Spot trade analytics dashboard built with Next.js, T
 
 ## Trade Coverage
 
-Binance Spot `myTrades` requires a `symbol`, so the app cannot fetch every trade with one global request. The connect page now supports:
+Binance Spot and Futures trade-list endpoints require a `symbol`, so the app cannot fetch every fill with one global request. The connect page supports:
 
-- Full market scan: discovers active Spot symbols from `exchangeInfo` and scans them one by one.
-- Broad quote scan: scans symbols for selected quote assets such as USDT, BTC, BNB, and TRY.
+- Markets: Spot, USD-M Futures, and COIN-M Futures.
+- Progress jobs: sync starts in the background and the frontend polls a job endpoint for symbol count, current symbol, trades found, and completion.
+- Full market scan: discovers active symbols from `exchangeInfo` and scans them one by one.
+- Broad quote scan: scans symbols for selected quote assets such as USDT, BTC, BNB, and TRY. Futures first uses income history to discover active symbols where possible.
 - Quick selected scan: scans only chosen symbols for faster tests.
 
-Full scan has the best coverage but can take several minutes on real accounts.
+Full scan has the best coverage but can take several minutes on real accounts. USD-M Futures user trade history is limited by Binance to the recent futures history window exposed by their endpoint.
 
 ## Quick Start
 
