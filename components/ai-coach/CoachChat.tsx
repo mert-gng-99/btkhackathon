@@ -92,6 +92,7 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
   const [profile, setProfile] = useState<TraderProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [activeAgents, setActiveAgents] = useState<AgentId[]>([]);
+  const [completedAgents, setCompletedAgents] = useState<AgentId[]>([]);
   const [agentStatus, setAgentStatus] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -188,6 +189,7 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
     setError(null);
     setReportMessage(null);
     setReportError(null);
+    setCompletedAgents([]);
     setActiveAgents(["orchestrator", ...predictedAgentsForQuestion(trimmed)]);
     setAgentStatus("Gemini orchestrator is planning sub-agent work...");
     setMessages((current) => [...current, { role: "user", content: trimmed }]);
@@ -219,12 +221,11 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
       const completedAgents = (payload.answer?.subAgentResults ?? [])
         .map((result: { agent: string }) => agentFromBackendName(result.agent))
         .filter((agent: AgentId | null): agent is AgentId => Boolean(agent));
-      setAgentStatus(`Completed ${completedAgents.length || 1} sub-agent checks.`);
+      const uniqueCompletedAgents = [...new Set<AgentId>(["orchestrator", ...completedAgents])];
+      setCompletedAgents(uniqueCompletedAgents);
+      setActiveAgents([]);
+      setAgentStatus(`Completed ${completedAgents.length || 1} sub-agent checks. Green cards show the agents used in the last run.`);
       setMessages((current) => [...current, { role: "assistant", content: payload.answer.answer, answer: payload.answer }]);
-      window.setTimeout(() => {
-        setActiveAgents([]);
-        setAgentStatus(null);
-      }, 1300);
     } catch (chatError: unknown) {
       setError(chatError instanceof Error ? chatError.message : "Coach request failed.");
       setActiveAgents([]);
@@ -355,30 +356,49 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
             ) : null}
             <PipelineStep
               active={activeAgents.includes("orchestrator")}
+              completed={completedAgents.includes("orchestrator")}
               icon={<Bot className="h-4 w-4" aria-hidden="true" />}
               title="Gemini orchestrator"
               detail="Plans the sub-agent work and merges structured outputs."
             />
             <PipelineStep
               active={activeAgents.includes("rag_researcher")}
+              completed={completedAgents.includes("rag_researcher")}
               icon={<DatabaseZap className="h-4 w-4" aria-hidden="true" />}
               title="RAG researcher"
               detail="Retrieves relevant session chunks and uploaded materials."
             />
             <PipelineStep
+              active={activeAgents.includes("behavior_analyst")}
+              completed={completedAgents.includes("behavior_analyst")}
+              icon={<BrainCircuit className="h-4 w-4" aria-hidden="true" />}
+              title="Behavior analyst"
+              detail="Checks fees, timing, frequency, and trade discipline metrics."
+            />
+            <PipelineStep
+              active={activeAgents.includes("profile_analyst")}
+              completed={completedAgents.includes("profile_analyst")}
+              icon={<UserRoundCog className="h-4 w-4" aria-hidden="true" />}
+              title="Profile analyst"
+              detail="Connects the answer to your cached trader profile."
+            />
+            <PipelineStep
               active={activeAgents.includes("revenge_trading_agent")}
+              completed={completedAgents.includes("revenge_trading_agent")}
               icon={<Flame className="h-4 w-4" aria-hidden="true" />}
               title="Revenge trading scan"
               detail="Looks for rapid follow-ups and post-loss escalation clues."
             />
             <PipelineStep
               active={activeAgents.includes("pnl_quality_agent")}
+              completed={completedAgents.includes("pnl_quality_agent")}
               icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />}
               title="PnL quality agent"
               detail="Checks whether success and PnL claims are well supported."
             />
             <PipelineStep
               active={activeAgents.includes("symbol_agent")}
+              completed={completedAgents.includes("symbol_agent")}
               icon={<Layers3 className="h-4 w-4" aria-hidden="true" />}
               title="Symbol agent"
               detail="Reviews concentration, symbol switching, and dominant markets."
@@ -560,22 +580,43 @@ function MetricChip({ label, value }: { label: string; value: string }) {
   );
 }
 
-function PipelineStep({ icon, title, detail, active }: { icon: ReactNode; title: string; detail: string; active?: boolean }) {
+function PipelineStep({
+  icon,
+  title,
+  detail,
+  active,
+  completed
+}: {
+  icon: ReactNode;
+  title: string;
+  detail: string;
+  active?: boolean;
+  completed?: boolean;
+}) {
+  const highlighted = active || completed;
+
   return (
     <div
       className={`flex gap-3 rounded-md border p-3 transition-all duration-300 ${
-        active ? "border-emerald-400/40 bg-emerald-400/10 shadow-[0_0_24px_rgba(52,211,153,0.16)]" : "border-slate-800 bg-slate-900"
+        highlighted ? "border-emerald-400/40 bg-emerald-400/10 shadow-[0_0_24px_rgba(52,211,153,0.16)]" : "border-slate-800 bg-slate-900"
       }`}
     >
       <div
         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-all duration-300 ${
-          active ? "animate-pulse border-emerald-300/50 bg-emerald-400/15 text-emerald-200" : "border-cyan-400/20 bg-cyan-400/10 text-cyan-200"
+          active
+            ? "animate-pulse border-emerald-300/50 bg-emerald-400/15 text-emerald-200"
+            : completed
+              ? "border-emerald-300/50 bg-emerald-400/15 text-emerald-200"
+              : "border-cyan-400/20 bg-cyan-400/10 text-cyan-200"
         }`}
       >
         {icon}
       </div>
       <div>
-        <p className={`text-sm font-semibold ${active ? "text-emerald-100" : "text-white"}`}>{title}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className={`text-sm font-semibold ${highlighted ? "text-emerald-100" : "text-white"}`}>{title}</p>
+          {completed ? <span className="rounded-md border border-emerald-400/25 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-200">used</span> : null}
+        </div>
         <p className="mt-1 text-xs leading-5 text-slate-400">{detail}</p>
       </div>
     </div>
