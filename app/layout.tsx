@@ -4,6 +4,7 @@ import { Inter_Tight, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
 import { I18nProvider } from "@/lib/i18n";
+import { SessionProviderWrapper } from "@/components/auth/SessionProviderWrapper";
 
 const interTight = Inter_Tight({
   subsets: ["latin"],
@@ -29,9 +30,11 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   return (
     <html lang="en" className={`${interTight.variable} ${jetbrainsMono.variable}`}>
       <body>
-        <I18nProvider defaultLocale="en">
-          <AppShell>{children}</AppShell>
-        </I18nProvider>
+        <SessionProviderWrapper>
+          <I18nProvider defaultLocale="en">
+            <AppShell>{children}</AppShell>
+          </I18nProvider>
+        </SessionProviderWrapper>
       </body>
     </html>
   );

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { BarChart3, BrainCircuit, ListFilter, LockKeyhole, Menu, ShieldCheck, UsersRound, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { UserMenu } from "@/components/auth/UserMenu";
 
 const navIcons = {
   connect: LockKeyhole,
@@ -103,6 +104,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               <span aria-hidden="true">·</span>
               <span className={locale === "tr" ? "tl-lang-active" : ""}>{dict.language.short.tr}</span>
             </button>
+
+            <UserMenu />
 
             <button
               type="button"
