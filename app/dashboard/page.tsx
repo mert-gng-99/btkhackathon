@@ -6,6 +6,8 @@ import { AnalyticsCharts } from "@/components/charts/AnalyticsCharts";
 import { HourlyBehavior } from "@/components/charts/HourlyBehavior";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { SymbolIntelligence } from "@/components/dashboard/SymbolIntelligence";
+import { PageHero } from "@/components/layout/PageHero";
+import { DashboardKpiScene } from "@/components/scenes/DashboardKpiScene";
 import { SessionGate } from "@/components/session/SessionGate";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
@@ -32,7 +34,17 @@ export default function DashboardPage() {
 
   return (
     <>
-      <section className="tl-card" style={{ overflow: "hidden" }}>
+      <PageHero
+        eyebrow={t.dashboard.ready}
+        title={t.dashboard.title}
+        sub={t.dashboard.intro}
+        scene={<DashboardKpiScene />}
+        sceneLabel={t.home.analytics.dash.loopName}
+        sceneRight={t.home.analytics.dash.spotPnlValue}
+        eyebrowTone="green"
+      />
+
+      <section data-reveal className="tl-reveal tl-card" style={{ overflow: "hidden" }}>
         <div className="grid gap-0 lg:grid-cols-[1.25fr_0.75fr]">
           <div style={{ padding: 24 }}>
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
@@ -45,9 +57,10 @@ export default function DashboardPage() {
                 {t.dashboard.expires} {new Date(session.expiresAt).toLocaleString()}
               </Badge>
             </div>
-            <h1 className="tl-display" style={{ marginTop: 18, fontSize: "clamp(28px, 4vw, 48px)" }}>{t.dashboard.title}</h1>
-            <p className="tl-sub" style={{ marginTop: 12 }}>{t.dashboard.intro}</p>
-            <div style={{ marginTop: 22, display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <p className="tl-sub" style={{ marginTop: 14, maxWidth: 600 }}>
+              {t.dashboard.pnlNote}
+            </p>
+            <div style={{ marginTop: 16, display: "flex", flexWrap: "wrap", gap: 8 }}>
               {markets.length > 0 ? (
                 markets.map((market) => (
                   <span key={market.marketType} className="tl-chip">
@@ -82,14 +95,13 @@ export default function DashboardPage() {
               <div className="tl-panel tl-tone-amber" style={{ gridColumn: "span 2" }}>
                 <p className="tl-label-mono" style={{ color: "rgba(245, 181, 68, 0.85)" }}>{t.dashboard.pnlConfidence}</p>
                 <p style={{ marginTop: 4, fontSize: 17, fontWeight: 600, color: "#FFE3AC" }}>{analytics.pnlEstimate.confidence}</p>
-                <p style={{ marginTop: 8, fontSize: 12, lineHeight: 1.5, color: "rgba(255, 227, 172, 0.78)" }}>{t.dashboard.pnlNote}</p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section data-reveal className="tl-reveal grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           tone="emerald"
           label={t.dashboard.metrics.totalTrades}
@@ -120,7 +132,7 @@ export default function DashboardPage() {
         />
       </section>
 
-      <Card tone="cyan">
+      <Card tone="cyan" data-reveal className="tl-reveal">
         <div className="grid gap-0 lg:grid-cols-[1.2fr_0.8fr]">
           <div style={{ padding: 24 }}>
             <Badge tone="cyan">{t.dashboard.behavior.eyebrow}</Badge>
@@ -178,7 +190,7 @@ export default function DashboardPage() {
         </div>
       </Card>
 
-      <section className="grid gap-4 lg:grid-cols-3">
+      <section data-reveal className="tl-reveal grid gap-4 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <h2 className="tl-card-title">{t.dashboard.flags.title}</h2>
@@ -220,10 +232,18 @@ export default function DashboardPage() {
         </Card>
       </section>
 
-      <SymbolIntelligence analytics={analytics} trades={session.trades} />
-      <HourlyBehavior analytics={analytics} />
-      <AnalyticsCharts analytics={analytics} />
-      <ActivityHeatmap analytics={analytics} />
+      <div data-reveal className="tl-reveal">
+        <SymbolIntelligence analytics={analytics} trades={session.trades} />
+      </div>
+      <div data-reveal className="tl-reveal">
+        <HourlyBehavior analytics={analytics} />
+      </div>
+      <div data-reveal className="tl-reveal">
+        <AnalyticsCharts analytics={analytics} />
+      </div>
+      <div data-reveal className="tl-reveal">
+        <ActivityHeatmap analytics={analytics} />
+      </div>
     </>
   );
 }

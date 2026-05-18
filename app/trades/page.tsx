@@ -1,5 +1,7 @@
 "use client";
 
+import { PageHero } from "@/components/layout/PageHero";
+import { TradeFlowScene } from "@/components/scenes/TradeFlowScene";
 import { SessionGate } from "@/components/session/SessionGate";
 import { TradeTable } from "@/components/trades/TradeTable";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -16,20 +18,26 @@ export default function TradesPage() {
 
   return (
     <>
-      <section className="tl-hero">
-        <span className="tl-eyebrow tl-eyebrow-cyan"><span className="tl-pulse" />{t.trades.badge}</span>
-        <h1 className="tl-display">{t.trades.title}</h1>
-        <p className="tl-sub">{t.trades.intro}</p>
-      </section>
+      <PageHero
+        eyebrow={t.trades.badge}
+        title={t.trades.title}
+        sub={t.trades.intro}
+        scene={<TradeFlowScene />}
+        sceneLabel="trade-flow.loop"
+        sceneRight={`${session.trades.length} ${t.symbolIntel.trades}`}
+        eyebrowTone="cyan"
+      />
 
       {session.trades.length === 0 ? (
-        <Card>
+        <Card data-reveal className="tl-reveal">
           <CardContent>
             <p style={{ fontSize: 14, color: "var(--tl-ink-2)" }}>{t.trades.empty}</p>
           </CardContent>
         </Card>
       ) : (
-        <TradeTable trades={session.trades} sessionId={session.id} />
+        <div data-reveal className="tl-reveal">
+          <TradeTable trades={session.trades} sessionId={session.id} />
+        </div>
       )}
     </>
   );

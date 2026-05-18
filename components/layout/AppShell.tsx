@@ -33,6 +33,37 @@ export function AppShell({ children }: { children: ReactNode }) {
     setMobileOpen(false);
   }, [pathname]);
 
+  // Reveal-on-scroll: any element with data-reveal fades+slides up when entering view.
+  useEffect(() => {
+    if (pathname === "/") return;
+    const elements = document.querySelectorAll<HTMLElement>("[data-reveal]:not(.in)");
+    if (elements.length === 0) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("in");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.08, rootMargin: "0px 0px -10% 0px" }
+    );
+    elements.forEach((el) => observer.observe(el));
+
+    // Pre-mark anything already on-screen so first paint is not blank.
+    requestAnimationFrame(() => {
+      elements.forEach((el) => {
+        const rect = el.getBoundingClientRect();
+        if (rect.top < window.innerHeight && rect.bottom > 0) {
+          el.classList.add("in");
+        }
+      });
+    });
+
+    return () => observer.disconnect();
+  }, [pathname]);
+
   if (pathname === "/") {
     return <>{children}</>;
   }

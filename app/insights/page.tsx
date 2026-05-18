@@ -2,6 +2,8 @@
 
 import { Lightbulb } from "lucide-react";
 import { TraderProfileCard } from "@/components/insights/TraderProfileCard";
+import { PageHero } from "@/components/layout/PageHero";
+import { InsightRadarScene } from "@/components/scenes/InsightRadarScene";
 import { SessionGate } from "@/components/session/SessionGate";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
@@ -18,15 +20,20 @@ export default function InsightsPage() {
 
   return (
     <>
-      <section className="tl-hero">
-        <span className="tl-eyebrow"><span className="tl-pulse" />{t.insights.badge}</span>
-        <h1 className="tl-display">{t.insights.title}</h1>
-        <p className="tl-sub">{t.insights.intro}</p>
-      </section>
+      <PageHero
+        eyebrow={t.insights.badge}
+        title={t.insights.title}
+        sub={t.insights.intro}
+        scene={<InsightRadarScene />}
+        sceneLabel="insight-radar.loop"
+        sceneRight={`${session.analytics.generatedInsights.length} signals`}
+      />
 
-      <TraderProfileCard sessionId={session.id} />
+      <div data-reveal className="tl-reveal">
+        <TraderProfileCard sessionId={session.id} />
+      </div>
 
-      <section className="grid gap-4 lg:grid-cols-2">
+      <section data-reveal className="tl-reveal grid gap-4 lg:grid-cols-2">
         {session.analytics.generatedInsights.map((insight) => (
           <Card key={insight.id}>
             <CardHeader>

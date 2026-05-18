@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Database, Loader2, Radar, ShieldCheck, UserPlus, UsersRound } from "lucide-react";
+import { PageHero } from "@/components/layout/PageHero";
+import { TraderNetworkScene } from "@/components/scenes/TraderNetworkScene";
 import { SessionGate } from "@/components/session/SessionGate";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -69,7 +71,17 @@ export function TraderDiscovery() {
 
   return (
     <>
-      <section className="tl-card" style={{ overflow: "hidden" }}>
+      <PageHero
+        eyebrow={t.traders.badge}
+        title={t.traders.title}
+        sub={t.traders.intro}
+        scene={<TraderNetworkScene />}
+        sceneLabel="trader-network.loop"
+        sceneRight={traders.length > 0 ? `${traders.length} peers` : t.traders.privacyTag}
+        eyebrowTone="cyan"
+      />
+
+      <section data-reveal className="tl-reveal tl-card" style={{ overflow: "hidden" }}>
         <div className="grid gap-0 lg:grid-cols-[1.2fr_0.8fr]">
           <div style={{ padding: 24 }}>
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
@@ -82,8 +94,7 @@ export function TraderDiscovery() {
                 {storage === "database" ? t.traders.storage.db : t.traders.storage.memory}
               </Badge>
             </div>
-            <h1 className="tl-display" style={{ marginTop: 18, fontSize: "clamp(28px, 4vw, 48px)" }}>{t.traders.title}</h1>
-            <p className="tl-sub" style={{ marginTop: 12 }}>{t.traders.intro}</p>
+            <p className="tl-sub" style={{ marginTop: 14, maxWidth: 540 }}>{t.traders.intro}</p>
           </div>
 
           <div
@@ -115,7 +126,7 @@ export function TraderDiscovery() {
 
       {registryError ? <div className="tl-notice tl-notice-red">{registryError}</div> : null}
 
-      <section className="grid gap-4 lg:grid-cols-3">
+      <section data-reveal className="tl-reveal grid gap-4 lg:grid-cols-3">
         {registryLoading ? (
           <Card className="lg:col-span-3">
             <CardContent>

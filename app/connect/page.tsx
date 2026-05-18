@@ -15,7 +15,8 @@ import {
   ShieldCheck,
   Sparkles
 } from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
+import { PageHero } from "@/components/layout/PageHero";
+import { ConnectKeyScene } from "@/components/scenes/ConnectKeyScene";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -177,13 +178,17 @@ export default function ConnectPage() {
 
   return (
     <>
-      <section className="tl-hero">
-        <span className="tl-eyebrow"><span className="tl-pulse" />{t.connect.badge}</span>
-        <h1 className="tl-display">{t.connect.title}</h1>
-        <p className="tl-sub">{t.connect.intro}</p>
-      </section>
+      <PageHero
+        eyebrow={t.connect.badge}
+        title={t.connect.title}
+        sub={t.connect.intro}
+        scene={<ConnectKeyScene />}
+        sceneLabel={t.home.security.keyCard.loopName}
+        sceneRight="00:04 / 00:08"
+        eyebrowTone="green"
+      />
 
-      <section className="grid gap-4 sm:grid-cols-3">
+      <section data-reveal className="tl-reveal grid gap-4 sm:grid-cols-3">
         {[
           { label: t.connect.summary.storage, value: t.connect.summary.storageValue, Icon: ShieldCheck },
           { label: t.connect.summary.writeActions, value: t.connect.summary.writeActionsValue, Icon: DatabaseZap },

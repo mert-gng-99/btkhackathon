@@ -1,6 +1,8 @@
 "use client";
 
 import { CoachChat } from "@/components/ai-coach/CoachChat";
+import { PageHero } from "@/components/layout/PageHero";
+import { CoachChatScene } from "@/components/scenes/CoachChatScene";
 import { SessionGate } from "@/components/session/SessionGate";
 import { useSessionData } from "@/hooks/useSessionData";
 import { useT } from "@/lib/i18n";
@@ -15,13 +17,19 @@ export default function AiCoachPage() {
 
   return (
     <>
-      <section className="tl-hero">
-        <span className="tl-eyebrow tl-eyebrow-cyan"><span className="tl-pulse" />{t.aiCoach.badge}</span>
-        <h1 className="tl-display">{t.aiCoach.title}</h1>
-        <p className="tl-sub">{t.aiCoach.intro}</p>
-      </section>
+      <PageHero
+        eyebrow={t.aiCoach.badge}
+        title={t.aiCoach.title}
+        sub={t.aiCoach.intro}
+        scene={<CoachChatScene />}
+        sceneLabel={t.home.coach.phone.loopName}
+        sceneRight={t.home.coach.phone.loopSub}
+        eyebrowTone="cyan"
+      />
 
-      <CoachChat sessionId={session.id} analytics={session.analytics} />
+      <div data-reveal className="tl-reveal">
+        <CoachChat sessionId={session.id} analytics={session.analytics} />
+      </div>
     </>
   );
 }
