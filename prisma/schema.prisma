@@ -106,3 +106,44 @@ model AiReport {
 
   @@index([sessionId, type])
 }
+
+model AnonymousTraderProfile {
+  id                 String   @id @default(cuid())
+  anonymousId        String   @unique
+  displayName        String
+  traderType         String
+  confidence         String
+  successRate        Float?
+  buyRatio           Float
+  rapidTradeRatio    Float
+  lateNightRatio     Float
+  feeToVolumeRatio   Float
+  topSymbolShare     Float
+  tradeCount         Int
+  activeDays         Int
+  primaryMarket      String
+  topSymbolsJson     Json
+  behavioralTagsJson Json
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  following AnonymousTraderFollow[] @relation("FollowerProfile")
+  followers AnonymousTraderFollow[] @relation("TargetProfile")
+
+  @@index([traderType])
+  @@index([successRate])
+  @@index([updatedAt])
+}
+
+model AnonymousTraderFollow {
+  id                  String   @id @default(cuid())
+  followerAnonymousId String
+  targetAnonymousId   String
+  createdAt           DateTime @default(now())
+
+  follower AnonymousTraderProfile @relation("FollowerProfile", fields: [followerAnonymousId], references: [anonymousId], onDelete: Cascade)
+  target   AnonymousTraderProfile @relation("TargetProfile", fields: [targetAnonymousId], references: [anonymousId], onDelete: Cascade)
+
+  @@unique([followerAnonymousId, targetAnonymousId])
+  @@index([targetAnonymousId])
+}

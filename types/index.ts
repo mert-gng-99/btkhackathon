@@ -199,6 +199,27 @@ export interface TraderProfile {
   insufficientData?: boolean;
 }
 
+export interface PublicTraderProfile {
+  anonymousId: string;
+  displayName: string;
+  traderType: string;
+  confidence: "low" | "medium" | "high";
+  successRate: number | null;
+  buyRatio: number;
+  rapidTradeRatio: number;
+  lateNightRatio: number;
+  feeToVolumeRatio: number;
+  topSymbolShare: number;
+  tradeCount: number;
+  activeDays: number;
+  primaryMarket: string;
+  topSymbols: string[];
+  behavioralTags: string[];
+  similarityScore?: number;
+  followedByCurrentUser?: boolean;
+  updatedAt: string;
+}
+
 export interface StoredSession {
   id: string;
   source: Exchange;

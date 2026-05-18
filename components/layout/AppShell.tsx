@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { BarChart3, BrainCircuit, ListFilter, LockKeyhole, ShieldCheck } from "lucide-react";
+import { BarChart3, BrainCircuit, ListFilter, LockKeyhole, ShieldCheck, UsersRound } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 const navItems = [
@@ -11,7 +11,8 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { href: "/trades", label: "Trades", icon: ListFilter },
   { href: "/insights", label: "Insights", icon: ShieldCheck },
-  { href: "/ai-coach", label: "AI Coach", icon: BrainCircuit }
+  { href: "/ai-coach", label: "AI Coach", icon: BrainCircuit },
+  { href: "/traders", label: "Traders", icon: UsersRound }
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {

@@ -5,6 +5,7 @@ import { ChunkBuilder } from "@/lib/rag/ChunkBuilder";
 import { VectorStoreService } from "@/lib/rag/VectorStoreService";
 import { sessionStore } from "@/lib/db/sessionStore";
 import { TraderProfileService } from "@/lib/ai/TraderProfileService";
+import { anonymousTraderRegistry } from "@/lib/traders/AnonymousTraderRegistry";
 
 const BodySchema = z.object({
   sessionId: z.string().min(8),
@@ -32,6 +33,10 @@ export async function POST(request: Request) {
     } catch {
       traderProfile = undefined;
     }
+  }
+
+  if (traderProfile) {
+    await anonymousTraderRegistry.upsertFromSession(sessionStore.get(session.id) ?? session, traderProfile).catch(() => null);
   }
 
   const materialChunks = await ChunkBuilder.buildMaterialChunksFromFolder(session.id);
