@@ -842,42 +842,44 @@
 .tl-pill-buy  { color: #B7F0D2; border-color: rgba(91, 213, 160, 0.4); background: rgba(91, 213, 160, 0.12); }
 .tl-pill-sell { color: #FFC7C7; border-color: rgba(255, 107, 107, 0.4); background: rgba(255, 107, 107, 0.12); }
 
-/* ===== Reveal animation (mirrors home page) ===== */
+/* ===== Reveal animation =====
+   Plays automatically on mount via CSS keyframes — does not depend on
+   any observer adding an .in class, so async-rendered content
+   (e.g. dashboard after session loads) is never left invisible. The
+   IntersectionObserver in AppShell still adds .in for compatibility
+   but the element is fully visible regardless. */
 
-.tl-reveal {
-  opacity: 0;
-  transform: translateY(18px);
-  transition: opacity 0.7s cubic-bezier(0.2, 0.65, 0.3, 1), transform 0.7s cubic-bezier(0.2, 0.65, 0.3, 1);
+@keyframes tl-reveal-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
+.tl-reveal {
+  animation: tl-reveal-up 0.55s cubic-bezier(0.2, 0.65, 0.3, 1) both;
+}
+
+/* No-op kept so legacy .in toggles don't break anything */
 .tl-reveal.in {
   opacity: 1;
   transform: translateY(0);
 }
 
 .tl-stagger > * {
-  opacity: 0;
-  transform: translateY(12px);
-  transition: opacity 0.7s ease, transform 0.7s ease;
+  animation: tl-reveal-up 0.55s cubic-bezier(0.2, 0.65, 0.3, 1) both;
 }
 
-.tl-stagger.in > * {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.tl-stagger.in > *:nth-child(1) { transition-delay: 0.05s; }
-.tl-stagger.in > *:nth-child(2) { transition-delay: 0.15s; }
-.tl-stagger.in > *:nth-child(3) { transition-delay: 0.25s; }
-.tl-stagger.in > *:nth-child(4) { transition-delay: 0.35s; }
-.tl-stagger.in > *:nth-child(5) { transition-delay: 0.45s; }
-.tl-stagger.in > *:nth-child(6) { transition-delay: 0.55s; }
+.tl-stagger > *:nth-child(1) { animation-delay: 0.05s; }
+.tl-stagger > *:nth-child(2) { animation-delay: 0.15s; }
+.tl-stagger > *:nth-child(3) { animation-delay: 0.25s; }
+.tl-stagger > *:nth-child(4) { animation-delay: 0.35s; }
+.tl-stagger > *:nth-child(5) { animation-delay: 0.45s; }
+.tl-stagger > *:nth-child(6) { animation-delay: 0.55s; }
 
 @media (prefers-reduced-motion: reduce) {
   .tl-reveal, .tl-stagger > * {
+    animation: none !important;
     opacity: 1;
     transform: none;
-    transition: none;
   }
 }
 
