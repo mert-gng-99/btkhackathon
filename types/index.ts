@@ -1,0 +1,154 @@
+export type Exchange = "binance";
+
+export type TradeSide = "BUY" | "SELL";
+
+export type InsightSeverity = "info" | "warning" | "risk";
+
+export type ReportType = "daily" | "weekly" | "monthly" | "ad_hoc";
+
+export interface NormalizedTrade {
+  id: string;
+  sessionId: string;
+  exchange: Exchange;
+  symbol: string;
+  orderId: string;
+  tradeId: string;
+  side: TradeSide;
+  price: number;
+  quantity: number;
+  quoteQuantity: number;
+  fee: number;
+  feeAsset: string;
+  timestamp: string;
+  isBuyer: boolean;
+  isMaker: boolean;
+}
+
+export interface FeeSummary {
+  asset: string;
+  amount: number;
+}
+
+export interface SymbolSummary {
+  symbol: string;
+  trades: number;
+  buys: number;
+  sells: number;
+  volume: number;
+  averageTradeSize: number;
+  firstTradeAt?: string;
+  lastTradeAt?: string;
+  realizedPnlEstimate?: number;
+}
+
+export interface ActivityPoint {
+  label: string;
+  trades: number;
+  volume: number;
+}
+
+export interface HeatmapPoint {
+  dayOfWeek: number;
+  hour: number;
+  trades: number;
+}
+
+export interface EstimatedTradePnl {
+  symbol: string;
+  tradeId: string;
+  timestamp: string;
+  side: TradeSide;
+  pnl: number;
+  quantity: number;
+}
+
+export interface PnlEstimate {
+  realized: number;
+  matchedSellTrades: number;
+  unmatchedSellTrades: number;
+  confidence: "none" | "low" | "medium" | "high";
+}
+
+export interface GeneratedInsight {
+  id: string;
+  title: string;
+  message: string;
+  severity: InsightSeverity;
+  category: "frequency" | "fees" | "timing" | "symbols" | "pnl" | "discipline" | "data";
+  evidence: string[];
+}
+
+export interface AnalyticsData {
+  totalTrades: number;
+  totalVolume: number;
+  averageTradeSize: number;
+  buySell: {
+    buys: number;
+    sells: number;
+    buyRatio: number;
+    sellRatio: number;
+  };
+  feesByAsset: FeeSummary[];
+  quoteFeeEstimate: number;
+  mostTradedSymbols: SymbolSummary[];
+  symbolSummaries: SymbolSummary[];
+  activityByDate: ActivityPoint[];
+  activityByMonth: ActivityPoint[];
+  activityByHour: ActivityPoint[];
+  heatmap: HeatmapPoint[];
+  rapidTradeCount: number;
+  lateNightTradeCount: number;
+  activeDays: number;
+  pnlEstimate: PnlEstimate;
+  bestTrades: EstimatedTradePnl[];
+  worstTrades: EstimatedTradePnl[];
+  generatedInsights: GeneratedInsight[];
+}
+
+export interface RagChunk {
+  id: string;
+  sessionId: string;
+  sourceType: "analytics" | "symbol" | "period" | "insight" | "trade_cluster" | "material" | "report";
+  sourceRef: string;
+  content: string;
+  metadata: Record<string, string | number | boolean>;
+  embedding?: number[];
+}
+
+export interface AiEvidence {
+  title: string;
+  detail: string;
+  sourceRef: string;
+}
+
+export interface AiCoachAnswer {
+  answer: string;
+  evidence: AiEvidence[];
+  retrievedChunks: RagChunk[];
+  disclaimer: string;
+}
+
+export interface AiReport {
+  id: string;
+  sessionId: string;
+  type: ReportType;
+  title: string;
+  summary: string;
+  metrics: string[];
+  observations: string[];
+  reflectionQuestions: string[];
+  createdAt: string;
+}
+
+export interface StoredSession {
+  id: string;
+  source: Exchange;
+  createdAt: string;
+  expiresAt: string;
+  trades: NormalizedTrade[];
+  analytics: AnalyticsData;
+  chunks: RagChunk[];
+  reports: AiReport[];
+  warnings: string[];
+}
+

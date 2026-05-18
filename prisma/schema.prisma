@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String?  @unique
+  createdAt DateTime @default(now())
+
+  apiConnections ApiConnection[]
+  sessions       Session[]
+}
+
+model ApiConnection {
+  id                 String    @id @default(cuid())
+  userId             String?
+  exchange           String    @default("binance")
+  apiKeyEncrypted    String?
+  apiSecretEncrypted String?
+  isReadOnly         Boolean
+  createdAt          DateTime  @default(now())
+  lastSyncedAt       DateTime?
+
+  user User? @relation(fields: [userId], references: [id])
+}
+
+model Session {
+  id        String   @id
+  userId    String?
+  source    String   @default("binance")
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  user      User?               @relation(fields: [userId], references: [id])
+  trades    Trade[]
+  analytics AnalyticsSnapshot[]
+  chunks    RagChunk[]
+  reports   AiReport[]
+}
+
+model Trade {
+  id            String   @id @default(cuid())
+  sessionId     String
+  exchange      String   @default("binance")
+  symbol        String
+  orderId       String
+  tradeId       String
+  side          String
+  price         Decimal
+  quantity      Decimal
+  quoteQuantity Decimal
+  fee           Decimal
+  feeAsset      String
+  timestamp     DateTime
+  isBuyer       Boolean
+  isMaker       Boolean
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, timestamp])
+  @@index([sessionId, symbol])
+  @@unique([sessionId, exchange, symbol, tradeId])
+}
+
+model AnalyticsSnapshot {
+  id           String   @id @default(cuid())
+  sessionId    String
+  metricsJson  Json
+  insightsJson Json
+  createdAt    DateTime @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model RagChunk {
+  id           String   @id @default(cuid())
+  sessionId    String
+  sourceType   String
+  sourceRef    String
+  content      String
+  metadataJson Json
+  embedding    Json?
+  createdAt    DateTime @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, sourceType])
+}
+
+model AiReport {
+  id          String   @id @default(cuid())
+  sessionId   String
+  type        String
+  contentJson Json
+  createdAt   DateTime @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, type])
+}
