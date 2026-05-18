@@ -2,6 +2,7 @@ export interface GeminiGenerateOptions {
   systemInstruction: string;
   prompt: string;
   temperature?: number;
+  responseMimeType?: "application/json" | "text/plain";
 }
 
 export class GeminiService {
@@ -35,7 +36,8 @@ export class GeminiService {
           }
         ],
         generationConfig: {
-          temperature: options.temperature ?? 0.2
+          temperature: options.temperature ?? 0.2,
+          ...(options.responseMimeType ? { responseMimeType: options.responseMimeType } : {})
         }
       })
     });
@@ -64,6 +66,7 @@ export class GeminiService {
   async generateJson<T>(options: GeminiGenerateOptions): Promise<T> {
     const text = await this.generateText({
       ...options,
+      responseMimeType: "application/json",
       prompt: `${options.prompt}\n\nReturn only valid JSON. Do not wrap it in markdown.`
     });
     return JSON.parse(extractJson(text)) as T;
@@ -81,4 +84,3 @@ function extractJson(text: string): string {
 
   return cleaned;
 }
-

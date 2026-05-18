@@ -4,6 +4,7 @@ import { AICoachService } from "@/lib/rag/AICoachService";
 import { ChunkBuilder } from "@/lib/rag/ChunkBuilder";
 import { VectorStoreService } from "@/lib/rag/VectorStoreService";
 import { sessionStore } from "@/lib/db/sessionStore";
+import { TraderProfileService } from "@/lib/ai/TraderProfileService";
 
 const BodySchema = z.object({
   sessionId: z.string().min(8),
@@ -22,9 +23,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Session not found or expired." }, { status: 404 });
   }
 
+  let traderProfile = session.traderProfile;
+  if (!traderProfile) {
+    try {
+      const profile = await new TraderProfileService().generate(session.analytics, session.trades);
+      traderProfile = profile;
+      sessionStore.setTraderProfile(session.id, profile);
+    } catch {
+      traderProfile = undefined;
+    }
+  }
+
   const materialChunks = await ChunkBuilder.buildMaterialChunksFromFolder(session.id);
   const indexedMaterials = new VectorStoreService().index(materialChunks);
-  const answer = await new AICoachService().answerQuestion(parsed.data.question, session.analytics, [...session.chunks, ...indexedMaterials]);
+  const answer = await new AICoachService().answerQuestion(
+    parsed.data.question,
+    session.analytics,
+    [...session.chunks, ...indexedMaterials],
+    traderProfile
+  );
 
   return NextResponse.json({ answer });
 }
