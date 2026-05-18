@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { sessionStore } from "@/lib/db/sessionStore";
 import { TraderProfileService } from "@/lib/ai/TraderProfileService";
+import { anonymousTraderRegistry } from "@/lib/traders/AnonymousTraderRegistry";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -19,6 +20,8 @@ export async function GET(request: Request) {
   const service = new TraderProfileService();
 
   if (session.traderProfile && !refresh) {
+    await anonymousTraderRegistry.upsertFromSession(session, session.traderProfile).catch(() => null);
+
     return NextResponse.json({
       configured: service.isConfigured(),
       cached: true,
@@ -30,6 +33,7 @@ export async function GET(request: Request) {
   try {
     const profile = await service.generate(session.analytics, session.trades);
     const updated = sessionStore.setTraderProfile(session.id, profile);
+    await anonymousTraderRegistry.upsertFromSession(updated ?? session, profile).catch(() => null);
 
     return NextResponse.json({
       configured: service.isConfigured(),

@@ -35,7 +35,14 @@ type FinalCoachJson = {
   keyFindings?: CoachKeyFinding[];
 };
 
-const AGENT_NAMES = new Set(["rag_researcher", "behavior_analyst", "profile_analyst"]);
+const AGENT_NAMES = new Set([
+  "rag_researcher",
+  "behavior_analyst",
+  "profile_analyst",
+  "revenge_trading_agent",
+  "pnl_quality_agent",
+  "symbol_agent"
+]);
 
 function evidenceFromChunk(chunk: RagChunk): AiEvidence {
   return {
@@ -129,8 +136,8 @@ export class AICoachService {
           "You are the Gemini orchestrator for a read-only trade analytics coach.",
           "Create a small sub-agent plan for answering the user's question.",
           "Return JSON only.",
-          "Use only these agents: rag_researcher, behavior_analyst, profile_analyst.",
-          "Use at most 3 subTasks.",
+          "Use only these agents: rag_researcher, behavior_analyst, profile_analyst, revenge_trading_agent, pnl_quality_agent, symbol_agent.",
+          "Use at most 4 subTasks.",
           "Do not include financial advice tasks."
         ].join("\n"),
         prompt: JSON.stringify(
@@ -139,7 +146,10 @@ export class AICoachService {
             availableAgents: {
               rag_researcher: "Retrieves and summarizes user-specific RAG evidence chunks.",
               behavior_analyst: "Reviews aggregate metrics such as timing, fees, frequency, symbols, and realized PnL samples.",
-              profile_analyst: "Uses the cached Gemini trader profile from Insights."
+              profile_analyst: "Uses the cached Gemini trader profile from Insights.",
+              revenge_trading_agent: "Checks rapid follow-up trades, size pressure, and post-loss escalation clues without overclaiming.",
+              pnl_quality_agent: "Assesses whether PnL evidence is reliable enough to support performance claims.",
+              symbol_agent: "Reviews symbol concentration, excessive switching, and dominant traded assets."
             },
             cachedTraderProfileAvailable: Boolean(traderProfile),
             metricsPreview: this.analyticsSnapshot(analytics),
@@ -148,7 +158,7 @@ export class AICoachService {
               subTasks: [
                 {
                   id: "short_snake_case",
-                  agent: "rag_researcher | behavior_analyst | profile_analyst",
+                  agent: "rag_researcher | behavior_analyst | profile_analyst | revenge_trading_agent | pnl_quality_agent | symbol_agent",
                   objective: "one concrete evidence-gathering objective"
                 }
               ]
@@ -181,7 +191,7 @@ export class AICoachService {
         agent: task.agent,
         objective: task.objective.trim()
       }))
-      .slice(0, 3);
+      .slice(0, 4);
 
     return normalized.length > 0 ? { subTasks: normalized } : fallback;
   }
@@ -202,6 +212,50 @@ export class AICoachService {
     ];
 
     if (
+      lower.includes("revenge") ||
+      lower.includes("emotion") ||
+      lower.includes("control") ||
+      lower.includes("mistake") ||
+      lower.includes("overtrade") ||
+      lower.includes("loss")
+    ) {
+      subTasks.push({
+        id: "revenge_trading_scan",
+        agent: "revenge_trading_agent",
+        objective: "Check whether rapid follow-ups and available loss/PnL signals suggest possible revenge trading."
+      });
+    }
+
+    if (
+      lower.includes("pnl") ||
+      lower.includes("profit") ||
+      lower.includes("loss") ||
+      lower.includes("success") ||
+      lower.includes("performance") ||
+      lower.includes("başarı")
+    ) {
+      subTasks.push({
+        id: "pnl_quality_scan",
+        agent: "pnl_quality_agent",
+        objective: "Assess the reliability of available PnL and success-rate evidence before drawing conclusions."
+      });
+    }
+
+    if (
+      lower.includes("coin") ||
+      lower.includes("symbol") ||
+      lower.includes("asset") ||
+      lower.includes("market") ||
+      lower.includes("concentration")
+    ) {
+      subTasks.push({
+        id: "symbol_concentration_scan",
+        agent: "symbol_agent",
+        objective: "Review symbol concentration, switching behavior, and dominant assets."
+      });
+    }
+
+    if (
       traderProfile &&
       (lower.includes("trader") ||
         lower.includes("type") ||
@@ -217,7 +271,7 @@ export class AICoachService {
       });
     }
 
-    return { subTasks: subTasks.slice(0, 3) };
+    return { subTasks: subTasks.slice(0, 4) };
   }
 
   private async runSubAgent(
@@ -317,6 +371,82 @@ export class AICoachService {
         findings: [traderProfile.summary, ...traderProfile.risks.slice(0, 3)],
         evidenceRefs: traderProfile.evidence.slice(0, 5),
         confidence: traderProfile.confidence
+      };
+    }
+
+    if (task.agent === "revenge_trading_agent") {
+      const rapidRatio = analytics.totalTrades > 0 ? analytics.rapidTradeCount / analytics.totalTrades : 0;
+      const worst = analytics.worstTrades.slice(0, 2);
+      const samples = analytics.pnlEstimate.matchedSellTrades;
+      const result =
+        samples > 0
+          ? `Possible revenge-trading review: ${analytics.rapidTradeCount} rapid follow-up trades (${formatPercent(
+              rapidRatio
+            )}) and ${samples} matched PnL samples are available. This can support a cautious behavioral check, but it is not proof of emotional trading.`
+          : `Possible revenge-trading review: ${analytics.rapidTradeCount} rapid follow-up trades (${formatPercent(
+              rapidRatio
+            )}) were detected, but PnL samples are insufficient to prove post-loss escalation.`;
+
+      return {
+        id: task.id,
+        agent: task.agent,
+        objective: task.objective,
+        status: "completed",
+        result,
+        findings: [
+          `${analytics.rapidTradeCount} rapid follow-up trades out of ${analytics.totalTrades} total trades.`,
+          `${analytics.pnlEstimate.matchedSellTrades} matched PnL samples with ${analytics.pnlEstimate.confidence} confidence.`,
+          ...worst.map((trade) => `${trade.symbol} had an estimated/scored PnL of ${formatNumber(trade.pnl)} at ${trade.timestamp}.`)
+        ],
+        evidenceRefs: ["trade_cluster:timing", "trade_cluster:rapid-examples", "pnl-estimate"],
+        confidence: analytics.pnlEstimate.confidence === "high" && rapidRatio > 0.15 ? "medium" : "low"
+      };
+    }
+
+    if (task.agent === "pnl_quality_agent") {
+      const scoredHours = analytics.hourlyBehavior.filter((hour) => hour.pnlSamples > 0);
+      const totalSamples = scoredHours.reduce((sum, hour) => sum + hour.pnlSamples, 0);
+      const winningSamples = scoredHours.reduce((sum, hour) => sum + hour.winningTrades, 0);
+      const successRate = totalSamples > 0 ? winningSamples / totalSamples : null;
+
+      return {
+        id: task.id,
+        agent: task.agent,
+        objective: task.objective,
+        status: "completed",
+        result:
+          successRate === null
+            ? `PnL quality is ${analytics.pnlEstimate.confidence}. There are no scored hourly success samples, so performance conclusions should stay limited.`
+            : `PnL quality is ${analytics.pnlEstimate.confidence}. Scored trades show a ${formatPercent(
+                successRate
+              )} success rate across ${totalSamples} PnL samples, so conclusions should reference this sample size.`,
+        findings: [
+          `PnL confidence: ${analytics.pnlEstimate.confidence}.`,
+          `Matched sell trades: ${analytics.pnlEstimate.matchedSellTrades}.`,
+          `Scored hourly PnL samples: ${totalSamples}.`,
+          `Estimated realized PnL: ${formatNumber(analytics.pnlEstimate.realized)}.`
+        ],
+        evidenceRefs: ["pnl-estimate", ...analytics.bestTrades.slice(0, 2).map((trade) => trade.tradeId)],
+        confidence: analytics.pnlEstimate.confidence === "none" ? "low" : analytics.pnlEstimate.confidence
+      };
+    }
+
+    if (task.agent === "symbol_agent") {
+      const top = analytics.symbolSummaries.slice(0, 5);
+      const topVolume = top[0]?.volume ?? 0;
+      const topShare = analytics.totalVolume > 0 ? topVolume / analytics.totalVolume : 0;
+
+      return {
+        id: task.id,
+        agent: task.agent,
+        objective: task.objective,
+        status: "completed",
+        result: `Symbol review: ${analytics.symbolSummaries.length} symbols were traded. The largest symbol share is ${formatPercent(
+          topShare
+        )}, led by ${top[0]?.symbol ?? "no symbol"}, which is useful for concentration and switching analysis.`,
+        findings: top.map((symbol) => `${symbol.symbol}: ${symbol.trades} trades, ${formatNumber(symbol.volume)} volume.`),
+        evidenceRefs: top.map((symbol) => symbol.symbol),
+        confidence: top.length >= 3 ? "high" : "medium"
       };
     }
 

@@ -37,6 +37,20 @@ Open `http://localhost:3000`.
 
 Set `DATABASE_URL` when enabling PostgreSQL persistence. The current MVP uses an in-memory temporary session store so the app can run quickly for demos.
 
+Anonymous trader discovery stores only public ratios and behavioral labels. It does not store raw trades, timestamps, API keys, order IDs, secrets, or balances. For local demos it uses memory fallback. To persist anonymous trader profiles and follows, run:
+
+```bash
+npm.cmd run db:generate
+npm.cmd run db:push
+```
+
+Then set:
+
+```env
+TRADER_REGISTRY_STORAGE="database"
+ANONYMIZATION_SALT="replace-with-a-long-random-production-secret"
+```
+
 RAG reference material can later be placed in `rag-materials/` as `.md` or `.txt` files.
 
 Gemini agents use server-side environment variables:

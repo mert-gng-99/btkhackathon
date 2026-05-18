@@ -4,7 +4,9 @@ export const COACH_DISCLAIMER =
 export const SUGGESTED_COACH_QUESTIONS = [
   "What are my biggest trading mistakes?",
   "What type of trader am I?",
+  "Do I show revenge trading signals?",
   "Do I overtrade?",
+  "How reliable is my PnL data?",
   "How much do fees hurt me?",
   "When do I usually lose control?",
   "Which hours look weakest for me?",
