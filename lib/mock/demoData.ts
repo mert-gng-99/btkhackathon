@@ -35,6 +35,7 @@ export function buildDemoTrades(): NormalizedTrade[] {
       id: `demo:binance:${symbolMeta.symbol}:${tradeId}`,
       sessionId: "demo",
       exchange: "binance",
+      marketType: index % 6 === 0 ? "um_futures" : "spot",
       symbol: symbolMeta.symbol,
       orderId: String(orderId),
       tradeId: String(tradeId),
@@ -46,7 +47,9 @@ export function buildDemoTrades(): NormalizedTrade[] {
       feeAsset: index % 7 === 0 ? "BNB" : "USDT",
       timestamp: timestamp.toISOString(),
       isBuyer: side === "BUY",
-      isMaker: index % 4 === 0
+      isMaker: index % 4 === 0,
+      realizedPnl: index % 6 === 0 ? Number(((seededRandom(index + 90) - 0.48) * 42).toFixed(2)) : undefined,
+      positionSide: index % 6 === 0 ? (side === "BUY" ? "LONG" : "SHORT") : undefined
     });
 
     orderId += 1;
@@ -55,4 +58,3 @@ export function buildDemoTrades(): NormalizedTrade[] {
 
   return trades.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 }
-

@@ -12,6 +12,7 @@ export function tradesToCsv(trades: NormalizedTrade[]): string {
   const headers = [
     "timestamp",
     "exchange",
+    "marketType",
     "symbol",
     "side",
     "price",
@@ -28,6 +29,7 @@ export function tradesToCsv(trades: NormalizedTrade[]): string {
     [
       trade.timestamp,
       trade.exchange,
+      trade.marketType,
       trade.symbol,
       trade.side,
       trade.price,
@@ -45,4 +47,3 @@ export function tradesToCsv(trades: NormalizedTrade[]): string {
 
   return [headers.join(","), ...rows].join("\n");
 }
-

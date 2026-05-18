@@ -36,7 +36,7 @@ export const sessionStore = {
     const withSessionId = trades.map((trade) => ({
       ...trade,
       sessionId,
-      id: `${sessionId}:binance:${trade.symbol}:${trade.tradeId}`
+      id: `${sessionId}:binance:${trade.marketType}:${trade.symbol}:${trade.tradeId}`
     }));
 
     const initialAnalytics = AnalyticsService.compute(withSessionId);

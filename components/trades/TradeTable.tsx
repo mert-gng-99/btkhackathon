@@ -108,7 +108,7 @@ export function TradeTable({ trades, sessionId }: TradeTableProps) {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-[980px] w-full border-collapse text-left text-sm">
+          <table className="min-w-[1080px] w-full border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-slate-800 text-xs uppercase tracking-wide text-slate-500">
                 {[
@@ -126,6 +126,7 @@ export function TradeTable({ trades, sessionId }: TradeTableProps) {
                   </th>
                 ))}
                 <th className="py-3 pr-4">Side</th>
+                <th className="py-3 pr-4">Market</th>
                 <th className="py-3 pr-4">Order</th>
               </tr>
             </thead>
@@ -143,6 +144,11 @@ export function TradeTable({ trades, sessionId }: TradeTableProps) {
                       {trade.side}
                     </span>
                   </td>
+                  <td className="py-3 pr-4">
+                    <span className="rounded-md bg-cyan-400/10 px-2 py-1 text-xs font-semibold text-cyan-100">
+                      {trade.marketType === "spot" ? "Spot" : trade.marketType === "um_futures" ? "USD-M" : "COIN-M"}
+                    </span>
+                  </td>
                   <td className="py-3 pr-4 text-slate-500">{trade.orderId}</td>
                 </tr>
               ))}
@@ -154,4 +160,3 @@ export function TradeTable({ trades, sessionId }: TradeTableProps) {
     </Card>
   );
 }
-

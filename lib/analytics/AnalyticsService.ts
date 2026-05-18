@@ -33,6 +33,7 @@ export class AnalyticsService {
     const buys = sorted.filter((trade) => trade.side === "BUY").length;
     const sells = totalTrades - buys;
     const feesByAsset = this.computeFees(sorted);
+    const marketBreakdown = this.computeMarketBreakdown(sorted);
     const quoteFeeEstimate = feesByAsset
       .filter((fee) => STABLE_QUOTE_ASSETS.includes(fee.asset))
       .reduce((sum, fee) => sum + fee.amount, 0);
@@ -61,6 +62,7 @@ export class AnalyticsService {
       },
       feesByAsset,
       quoteFeeEstimate: round(quoteFeeEstimate, 4),
+      marketBreakdown,
       mostTradedSymbols: [...symbolSummaries].sort((a, b) => b.trades - a.trades).slice(0, 8),
       symbolSummaries,
       activityByDate,
@@ -89,17 +91,37 @@ export class AnalyticsService {
       .sort((a, b) => a.asset.localeCompare(b.asset));
   }
 
+  private static computeMarketBreakdown(trades: NormalizedTrade[]): AnalyticsData["marketBreakdown"] {
+    const grouped = new Map<string, { trades: number; volume: number }>();
+
+    for (const trade of trades) {
+      const item = grouped.get(trade.marketType) ?? { trades: 0, volume: 0 };
+      item.trades += 1;
+      item.volume += trade.quoteQuantity;
+      grouped.set(trade.marketType, item);
+    }
+
+    return Array.from(grouped.entries()).map(([marketType, value]) => ({
+      marketType: marketType as AnalyticsData["marketBreakdown"][number]["marketType"],
+      trades: value.trades,
+      volume: round(value.volume, 2)
+    }));
+  }
+
   private static computeSymbolSummaries(trades: NormalizedTrade[], pnlBySymbol: Map<string, number>): SymbolSummary[] {
     const grouped = new Map<string, NormalizedTrade[]>();
 
     for (const trade of trades) {
-      const group = grouped.get(trade.symbol) ?? [];
+      const key = `${trade.marketType}:${trade.symbol}`;
+      const group = grouped.get(key) ?? [];
       group.push(trade);
-      grouped.set(trade.symbol, group);
+      grouped.set(key, group);
     }
 
     return Array.from(grouped.entries())
-      .map(([symbol, group]) => {
+      .map(([key, group]) => {
+        const first = group[0];
+        const symbol = first.marketType === "spot" ? first.symbol : `${first.symbol} · ${first.marketType === "um_futures" ? "USD-M" : "COIN-M"}`;
         const buys = group.filter((trade) => trade.side === "BUY").length;
         const volume = group.reduce((sum, trade) => sum + trade.quoteQuantity, 0);
 
@@ -112,7 +134,7 @@ export class AnalyticsService {
           averageTradeSize: group.length > 0 ? round(volume / group.length, 2) : 0,
           firstTradeAt: group[0]?.timestamp,
           lastTradeAt: group[group.length - 1]?.timestamp,
-          realizedPnlEstimate: pnlBySymbol.has(symbol) ? round(pnlBySymbol.get(symbol) ?? 0, 2) : undefined
+          realizedPnlEstimate: pnlBySymbol.has(key) ? round(pnlBySymbol.get(key) ?? 0, 2) : undefined
         };
       })
       .sort((a, b) => b.volume - a.volume);
@@ -176,6 +198,37 @@ export class AnalyticsService {
   }
 
   private static estimateRealizedPnl(trades: NormalizedTrade[]): PnlComputation {
+    const officialPnlTrades = trades.filter((trade) => typeof trade.realizedPnl === "number" && Number.isFinite(trade.realizedPnl));
+    if (officialPnlTrades.length > 0) {
+      const pnlBySymbol = new Map<string, number>();
+
+      for (const trade of officialPnlTrades) {
+        const key = `${trade.marketType}:${trade.symbol}`;
+        pnlBySymbol.set(key, (pnlBySymbol.get(key) ?? 0) + (trade.realizedPnl ?? 0));
+      }
+
+      const tradePnl = officialPnlTrades.map((trade) => ({
+        symbol: trade.symbol,
+        tradeId: trade.tradeId,
+        timestamp: trade.timestamp,
+        side: trade.side,
+        pnl: round(trade.realizedPnl ?? 0, 2),
+        quantity: round(trade.quantity, 8)
+      }));
+
+      return {
+        pnlEstimate: {
+          realized: round(Array.from(pnlBySymbol.values()).reduce((sum, value) => sum + value, 0), 2),
+          matchedSellTrades: officialPnlTrades.length,
+          unmatchedSellTrades: 0,
+          confidence: "high"
+        },
+        bySymbol: pnlBySymbol,
+        bestTrades: [...tradePnl].sort((a, b) => b.pnl - a.pnl).slice(0, 5),
+        worstTrades: [...tradePnl].sort((a, b) => a.pnl - b.pnl).slice(0, 5)
+      };
+    }
+
     const lotsBySymbol = new Map<string, WorkingLot[]>();
     const pnlBySymbol = new Map<string, number>();
     const sellTradePnl: EstimatedTradePnl[] = [];
@@ -183,6 +236,10 @@ export class AnalyticsService {
     let unmatchedSellTrades = 0;
 
     for (const trade of trades) {
+      if (trade.marketType !== "spot") {
+        continue;
+      }
+
       const { quoteAsset } = splitSymbol(trade.symbol);
       if (!STABLE_QUOTE_ASSETS.includes(quoteAsset)) {
         continue;
@@ -229,7 +286,8 @@ export class AnalyticsService {
 
       const matchedProceeds = trade.quoteQuantity * (matchedQuantity / trade.quantity);
       const pnl = matchedProceeds - costBasis;
-      pnlBySymbol.set(trade.symbol, (pnlBySymbol.get(trade.symbol) ?? 0) + pnl);
+      const key = `${trade.marketType}:${trade.symbol}`;
+      pnlBySymbol.set(key, (pnlBySymbol.get(key) ?? 0) + pnl);
       sellTradePnl.push({
         symbol: trade.symbol,
         tradeId: trade.tradeId,
@@ -259,4 +317,3 @@ export class AnalyticsService {
     };
   }
 }
-

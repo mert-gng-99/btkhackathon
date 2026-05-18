@@ -41,6 +41,36 @@ export interface BinanceRawTrade {
   isBestMatch: boolean;
 }
 
+export interface BinanceRawFuturesTrade {
+  buyer: boolean;
+  commission: string;
+  commissionAsset: string;
+  id: number | string;
+  maker: boolean;
+  orderId: number | string;
+  price: string;
+  qty: string;
+  quoteQty?: string;
+  baseQty?: string;
+  realizedPnl?: string;
+  side: "BUY" | "SELL";
+  positionSide?: string;
+  symbol: string;
+  pair?: string;
+  time: number;
+}
+
+export interface BinanceFuturesIncome {
+  symbol: string;
+  incomeType: string;
+  income: string;
+  asset: string;
+  info: string;
+  time: number;
+  tranId: number | string;
+  tradeId?: string;
+}
+
 export interface FetchTradesOptions {
   startTime?: number;
   endTime?: number;
@@ -54,6 +84,19 @@ export interface BinanceExchangeInfoResponse {
     baseAsset: string;
     quoteAsset: string;
     isSpotTradingAllowed?: boolean;
+  }>;
+}
+
+export interface BinanceFuturesExchangeInfoResponse {
+  symbols: Array<{
+    symbol: string;
+    pair?: string;
+    contractType?: string;
+    status?: string;
+    contractStatus?: string;
+    baseAsset?: string;
+    quoteAsset?: string;
+    marginAsset?: string;
   }>;
 }
 
