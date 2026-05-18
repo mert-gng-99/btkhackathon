@@ -24,8 +24,7 @@ export async function POST(request: Request) {
 
   const materialChunks = await ChunkBuilder.buildMaterialChunksFromFolder(session.id);
   const indexedMaterials = new VectorStoreService().index(materialChunks);
-  const answer = new AICoachService().answerQuestion(parsed.data.question, session.analytics, [...session.chunks, ...indexedMaterials]);
+  const answer = await new AICoachService().answerQuestion(parsed.data.question, session.analytics, [...session.chunks, ...indexedMaterials]);
 
   return NextResponse.json({ answer });
 }
-

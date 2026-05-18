@@ -1,6 +1,7 @@
 import { COACH_DISCLAIMER } from "@/lib/rag/ragTypes";
 import { VectorStoreService } from "@/lib/rag/VectorStoreService";
 import { formatNumber, formatPercent } from "@/lib/utils/numbers";
+import { GeminiService } from "@/lib/ai/GeminiService";
 import type { AiCoachAnswer, AiEvidence, AnalyticsData, RagChunk } from "@/types";
 
 function evidenceFromChunk(chunk: RagChunk): AiEvidence {
@@ -12,9 +13,12 @@ function evidenceFromChunk(chunk: RagChunk): AiEvidence {
 }
 
 export class AICoachService {
-  constructor(private readonly vectorStore = new VectorStoreService()) {}
+  constructor(
+    private readonly vectorStore = new VectorStoreService(),
+    private readonly gemini = new GeminiService()
+  ) {}
 
-  answerQuestion(question: string, analytics: AnalyticsData, chunks: RagChunk[]): AiCoachAnswer {
+  async answerQuestion(question: string, analytics: AnalyticsData, chunks: RagChunk[]): Promise<AiCoachAnswer> {
     const retrieved = this.vectorStore.retrieve(question, chunks, 7);
 
     if (analytics.totalTrades === 0 || retrieved.length === 0) {
@@ -25,6 +29,56 @@ export class AICoachService {
         retrievedChunks: [],
         disclaimer: COACH_DISCLAIMER
       };
+    }
+
+    if (this.gemini.isConfigured()) {
+      try {
+        const answer = await this.gemini.generateText({
+          systemInstruction: [
+            "You are an AI Trade Coach for a read-only Binance analytics app.",
+            "Answer only from the supplied user-specific trade context.",
+            "Do not give financial advice.",
+            "Never recommend buy, sell, hold, leverage, entries, exits, or specific assets.",
+            "Focus on behavior, discipline, fees, timing, frequency, concentration, and realized-PnL evidence.",
+            "If context is insufficient, say so clearly."
+          ].join("\n"),
+          prompt: JSON.stringify(
+            {
+              question,
+              analytics: {
+                totalTrades: analytics.totalTrades,
+                totalVolume: analytics.totalVolume,
+                buySell: analytics.buySell,
+                feesByAsset: analytics.feesByAsset,
+                rapidTradeCount: analytics.rapidTradeCount,
+                lateNightTradeCount: analytics.lateNightTradeCount,
+                pnlEstimate: analytics.pnlEstimate,
+                marketBreakdown: analytics.marketBreakdown,
+                topSymbols: analytics.symbolSummaries.slice(0, 8),
+                hourlyBehavior: analytics.hourlyBehavior.filter((hour) => hour.trades > 0)
+              },
+              retrievedContext: retrieved.map((chunk) => ({
+                sourceType: chunk.sourceType,
+                sourceRef: chunk.sourceRef,
+                content: chunk.content
+              })),
+              requiredStyle: "Concise, evidence-based, no investment advice, include concrete metrics."
+            },
+            null,
+            2
+          ),
+          temperature: 0.2
+        });
+
+        return {
+          answer,
+          evidence: retrieved.slice(0, 5).map(evidenceFromChunk),
+          retrievedChunks: retrieved,
+          disclaimer: COACH_DISCLAIMER
+        };
+      } catch {
+        // Fall through to the deterministic grounded answer if Gemini is temporarily unavailable.
+      }
     }
 
     const lower = question.toLowerCase();
@@ -114,4 +168,3 @@ export class AICoachService {
       .join(", ")}.`;
   }
 }
-

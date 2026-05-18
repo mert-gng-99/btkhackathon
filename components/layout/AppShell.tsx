@@ -25,9 +25,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="flex h-10 w-10 items-center justify-center rounded-md border border-amber-400/30 bg-amber-400/10">
               <ShieldCheck className="h-5 w-5 text-amber-300" aria-hidden="true" />
             </span>
-            <span>
+              <span>
               <span className="block text-sm font-semibold text-white">ReadOnly Alpha</span>
-              <span className="block text-xs text-slate-500">Binance Spot analytics</span>
+              <span className="block text-xs text-slate-500">Spot & Futures analytics</span>
             </span>
           </Link>
 

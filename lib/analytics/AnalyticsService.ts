@@ -8,6 +8,7 @@ import type {
   FeeSummary,
   GeneratedInsight,
   HeatmapPoint,
+  HourlyBehaviorPoint,
   NormalizedTrade,
   PnlEstimate,
   SymbolSummary
@@ -43,6 +44,7 @@ export class AnalyticsService {
     const activityByDate = this.groupActivity(sorted, (trade) => toDateKey(new Date(trade.timestamp)));
     const activityByMonth = this.groupActivity(sorted, (trade) => toMonthKey(new Date(trade.timestamp)));
     const activityByHour = this.groupActivity(sorted, (trade) => `${new Date(trade.timestamp).getUTCHours().toString().padStart(2, "0")}:00 UTC`);
+    const hourlyBehavior = this.computeHourlyBehavior(sorted);
     const heatmap = this.computeHeatmap(sorted);
     const rapidTradeCount = this.computeRapidTradeCount(sorted);
     const lateNightTradeCount = sorted.filter((trade) => {
@@ -68,6 +70,7 @@ export class AnalyticsService {
       activityByDate,
       activityByMonth,
       activityByHour,
+      hourlyBehavior,
       heatmap,
       rapidTradeCount,
       lateNightTradeCount,
@@ -121,7 +124,7 @@ export class AnalyticsService {
     return Array.from(grouped.entries())
       .map(([key, group]) => {
         const first = group[0];
-        const symbol = first.marketType === "spot" ? first.symbol : `${first.symbol} · ${first.marketType === "um_futures" ? "USD-M" : "COIN-M"}`;
+        const symbol = first.marketType === "spot" ? first.symbol : `${first.symbol} - ${first.marketType === "um_futures" ? "USD-M" : "COIN-M"}`;
         const buys = group.filter((trade) => trade.side === "BUY").length;
         const volume = group.reduce((sum, trade) => sum + trade.quoteQuantity, 0);
 
@@ -181,6 +184,30 @@ export class AnalyticsService {
     }
 
     return points;
+  }
+
+  private static computeHourlyBehavior(trades: NormalizedTrade[]): HourlyBehaviorPoint[] {
+    return Array.from({ length: 24 }, (_, hour) => {
+      const group = trades.filter((trade) => new Date(trade.timestamp).getUTCHours() === hour);
+      const pnlTrades = group.filter((trade) => typeof trade.realizedPnl === "number" && Number.isFinite(trade.realizedPnl));
+      const winningTrades = pnlTrades.filter((trade) => (trade.realizedPnl ?? 0) > 0).length;
+      const losingTrades = pnlTrades.filter((trade) => (trade.realizedPnl ?? 0) < 0).length;
+      const scoredTrades = winningTrades + losingTrades;
+
+      return {
+        hour,
+        label: `${hour.toString().padStart(2, "0")}:00`,
+        trades: group.length,
+        buyTrades: group.filter((trade) => trade.side === "BUY").length,
+        sellTrades: group.filter((trade) => trade.side === "SELL").length,
+        volume: round(group.reduce((sum, trade) => sum + trade.quoteQuantity, 0), 2),
+        realizedPnl: round(pnlTrades.reduce((sum, trade) => sum + (trade.realizedPnl ?? 0), 0), 2),
+        pnlSamples: pnlTrades.length,
+        winningTrades,
+        losingTrades,
+        successRate: scoredTrades > 0 ? winningTrades / scoredTrades : null
+      };
+    });
   }
 
   private static computeRapidTradeCount(trades: NormalizedTrade[]): number {
