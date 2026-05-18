@@ -58,6 +58,20 @@ export interface HeatmapPoint {
   trades: number;
 }
 
+export interface HourlyBehaviorPoint {
+  hour: number;
+  label: string;
+  trades: number;
+  buyTrades: number;
+  sellTrades: number;
+  volume: number;
+  realizedPnl: number;
+  pnlSamples: number;
+  winningTrades: number;
+  losingTrades: number;
+  successRate: number | null;
+}
+
 export interface EstimatedTradePnl {
   symbol: string;
   tradeId: string;
@@ -105,6 +119,7 @@ export interface AnalyticsData {
   activityByDate: ActivityPoint[];
   activityByMonth: ActivityPoint[];
   activityByHour: ActivityPoint[];
+  hourlyBehavior: HourlyBehaviorPoint[];
   heatmap: HeatmapPoint[];
   rapidTradeCount: number;
   lateNightTradeCount: number;
@@ -148,6 +163,18 @@ export interface AiReport {
   observations: string[];
   reflectionQuestions: string[];
   createdAt: string;
+}
+
+export interface TraderProfile {
+  traderType: string;
+  confidence: "low" | "medium" | "high";
+  summary: string;
+  evidence: string[];
+  strengths: string[];
+  risks: string[];
+  behavioralTags: string[];
+  reflectionQuestions: string[];
+  insufficientData?: boolean;
 }
 
 export interface StoredSession {

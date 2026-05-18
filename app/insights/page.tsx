@@ -1,6 +1,7 @@
 "use client";
 
 import { FileText, Lightbulb, ShieldAlert } from "lucide-react";
+import { TraderProfileCard } from "@/components/insights/TraderProfileCard";
 import { SessionGate } from "@/components/session/SessionGate";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
@@ -19,9 +20,11 @@ export default function InsightsPage() {
         <Badge tone="amber">Deterministic and evidence-backed</Badge>
         <h1 className="mt-3 text-3xl font-semibold text-white">Insights and reports</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-          These insights come from explicit rules over your normalized trade history. They are not random and they are not investment recommendations.
+          Gemini generates the trader profile from your metrics. Rule-based insight cards remain deterministic and evidence-backed.
         </p>
       </div>
+
+      <TraderProfileCard sessionId={session.id} />
 
       <section className="grid gap-4 lg:grid-cols-2">
         {session.analytics.generatedInsights.map((insight) => (
@@ -97,4 +100,3 @@ export default function InsightsPage() {
     </div>
   );
 }
-

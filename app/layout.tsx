@@ -5,7 +5,7 @@ import { AppShell } from "@/components/layout/AppShell";
 
 export const metadata: Metadata = {
   title: "ReadOnly Alpha",
-  description: "Secure Binance Spot trade analytics and grounded behavioral AI coaching."
+  description: "Secure Binance Spot and Futures trade analytics with grounded behavioral AI coaching."
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

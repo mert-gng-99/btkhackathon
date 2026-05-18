@@ -39,3 +39,13 @@ Set `DATABASE_URL` when enabling PostgreSQL persistence. The current MVP uses an
 
 RAG reference material can later be placed in `rag-materials/` as `.md` or `.txt` files.
 
+Gemini agents use server-side environment variables:
+
+```env
+GEMINI_API_KEY=""
+GEMINI_MODEL="gemini-2.5-flash"
+GEMINI_API_BASE_URL="https://generativelanguage.googleapis.com/v1beta"
+```
+
+After editing `.env`, restart the dev server.
+
