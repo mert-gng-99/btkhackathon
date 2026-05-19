@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useT } from "@/lib/i18n";
 
 interface LoginCardProps {
@@ -11,7 +10,6 @@ interface LoginCardProps {
 
 export function LoginCard({ action, callbackUrl }: LoginCardProps) {
   const t = useT();
-  const router = useRouter();
   const [demoLoading, setDemoLoading] = useState(false);
   const [demoError, setDemoError] = useState<string | null>(null);
 
@@ -19,18 +17,27 @@ export function LoginCard({ action, callbackUrl }: LoginCardProps) {
     setDemoLoading(true);
     setDemoError(null);
     try {
-      const res = await fetch("/api/demo/session", { method: "POST" });
-      const payload = await res.json();
+      const res = await fetch("/api/demo/session", {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store"
+      });
+      const payload = await res.json().catch(() => null);
       if (!res.ok || !payload?.sessionId) {
-        throw new Error(payload?.error ?? t.auth.demo.failed);
+        const detail = payload?.error ? ` (${payload.error})` : ` (HTTP ${res.status})`;
+        throw new Error(`${t.auth.demo.failed}${detail}`);
       }
       try {
         window.localStorage.setItem("tradeAnalyticsSessionId", payload.sessionId);
       } catch {
         // localStorage unavailable; cookie still gates middleware
       }
-      router.push(callbackUrl || "/dashboard");
+      // Hard navigation guarantees the freshly-set cookie reaches the
+      // middleware on the next request — router.push can race with the
+      // cookie store on some Next.js builds.
+      window.location.assign(callbackUrl || "/dashboard");
     } catch (err) {
+      console.error("[demo] failed:", err);
       setDemoError(err instanceof Error ? err.message : t.auth.demo.failed);
       setDemoLoading(false);
     }
