@@ -15,14 +15,15 @@ import {
   ShieldAlert,
   Sparkles,
   TrendingUp,
-  UserRoundCog
+  UserRoundCog,
+  Wand2
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { useT } from "@/lib/i18n";
 import { SUGGESTED_COACH_QUESTIONS } from "@/lib/rag/ragTypes";
-import type { AiCoachAnswer, AnalyticsData, TraderProfile } from "@/types";
+import type { AiCoachAnswer, AnalyticsData, TraderProfile, WhatIfSimulationResult } from "@/types";
 import { PdfReportProgress } from "./PdfReportProgress";
 
 interface ChatMessage {
@@ -87,6 +88,9 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
   const [reportStep, setReportStep] = useState(0);
   const [reportMessage, setReportMessage] = useState<string | null>(null);
   const [reportError, setReportError] = useState<string | null>(null);
+  const [whatIfLoading, setWhatIfLoading] = useState(false);
+  const [whatIfResult, setWhatIfResult] = useState<WhatIfSimulationResult | null>(null);
+  const [whatIfError, setWhatIfError] = useState<string | null>(null);
   const storageKey = `trader-profile:${sessionId}`;
 
   // Refresh welcome message when locale changes
@@ -153,6 +157,28 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
     }, 2200);
     return () => window.clearInterval(interval);
   }, [reportLoading, REPORT_STEPS.length]);
+
+  async function runWhatIf() {
+    if (whatIfLoading) return;
+    setWhatIfLoading(true);
+    setWhatIfError(null);
+    try {
+      const response = await fetch("/api/ai-coach/what-if", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId })
+      });
+      const payload = (await response.json()) as WhatIfSimulationResult | { error?: string };
+      if (!response.ok) {
+        throw new Error((payload as { error?: string }).error ?? "What-if request failed.");
+      }
+      setWhatIfResult(payload as WhatIfSimulationResult);
+    } catch (err) {
+      setWhatIfError(err instanceof Error ? err.message : "What-if request failed.");
+    } finally {
+      setWhatIfLoading(false);
+    }
+  }
 
   async function ask(nextQuestion = question) {
     const trimmed = nextQuestion.trim();
@@ -427,6 +453,75 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
           </div>
 
           <div
+            className="mt-4"
+            style={{
+              padding: 12,
+              borderRadius: 12,
+              border: "1px solid var(--tl-line)",
+              background: "rgba(6, 10, 20, 0.45)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 10
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ padding: 6, borderRadius: 8, border: "1px solid var(--tl-line-strong)", background: "var(--tl-cyan-soft)", color: "var(--tl-cyan)" }}>
+                <Wand2 className="h-4 w-4" aria-hidden="true" />
+              </span>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: "var(--tl-ink)", margin: 0 }}>{t.aiCoach.chat.whatIf.title}</p>
+                {analytics.worstTrades.length === 0 ? (
+                  <p style={{ marginTop: 2, fontSize: 11.5, color: "var(--tl-ink-3)" }}>{t.aiCoach.chat.whatIf.empty}</p>
+                ) : null}
+              </div>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+              <Button
+                variant="secondary"
+                onClick={runWhatIf}
+                disabled={whatIfLoading || analytics.worstTrades.length === 0}
+              >
+                {whatIfLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Wand2 className="h-4 w-4" aria-hidden="true" />}
+                {whatIfLoading ? t.aiCoach.chat.whatIf.loading : t.aiCoach.chat.whatIf.skipWorst5}
+              </Button>
+              {whatIfResult ? (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <MetricChip label={t.aiCoach.chat.whatIf.baseline} value={whatIfResult.baselinePnl.toFixed(2)} />
+                  <MetricChip label={t.aiCoach.chat.whatIf.simulated} value={whatIfResult.simulatedPnl.toFixed(2)} />
+                  <MetricChip
+                    label={t.aiCoach.chat.whatIf.delta}
+                    value={`${whatIfResult.delta >= 0 ? "+" : ""}${whatIfResult.delta.toFixed(2)}`}
+                  />
+                </div>
+              ) : null}
+            </div>
+            {whatIfResult && whatIfResult.skippedTrades.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {whatIfResult.skippedTrades.map((trade) => (
+                  <div
+                    key={trade.tradeId}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 8,
+                      padding: "6px 10px",
+                      borderRadius: 8,
+                      background: "rgba(255,255,255,0.03)",
+                      fontSize: 12,
+                      color: "var(--tl-ink-3)"
+                    }}
+                  >
+                    <span>{trade.symbol}</span>
+                    <span style={{ color: trade.pnl < 0 ? "var(--tl-red)" : "var(--tl-green)" }}>{trade.pnl.toFixed(2)}</span>
+                    <span style={{ color: "var(--tl-ink-3)", fontSize: 11 }}>{trade.timestamp.slice(0, 16).replace("T", " ")}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {whatIfError ? <div className="tl-notice tl-notice-red">{whatIfError}</div> : null}
+          </div>
+
+          <div
             className="mt-4 sm:mt-5"
             style={{
               minHeight: "min(60vh, 540px)",
@@ -491,6 +586,23 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
                             <Badge tone={result.confidence === "high" ? "emerald" : result.confidence === "medium" ? "amber" : "slate"}>{result.confidence}</Badge>
                           </div>
                           <p style={{ marginTop: 8, fontSize: 12, lineHeight: 1.55, color: "var(--tl-ink-2)" }}>{result.result}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {message.answer?.toolTrace && message.answer.toolTrace.length > 0 ? (
+                  <div className="tl-panel tl-tone-cyan" style={{ marginTop: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(91, 224, 230, 0.9)" }}>
+                      <Wand2 className="h-4 w-4" aria-hidden="true" />
+                      {t.aiCoach.chat.toolTrace}
+                    </div>
+                    <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                      {message.answer.toolTrace.map((tt, ttIndex) => (
+                        <div key={`${tt.tool}-${ttIndex}`} className="tl-panel" style={{ background: "rgba(6, 10, 20, 0.55)" }}>
+                          <Badge tone="cyan">{tt.tool}</Badge>
+                          <p style={{ marginTop: 8, fontSize: 12, lineHeight: 1.55, color: "var(--tl-ink-2)" }}>{tt.outputSummary}</p>
                         </div>
                       ))}
                     </div>
