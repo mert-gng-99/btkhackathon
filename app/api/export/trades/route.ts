@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { sessionStore } from "@/lib/db/sessionStore";
+import { resolveSession } from "@/lib/db/sessionResolver";
 import { tradesToCsv } from "@/lib/utils/csv";
 
 export async function GET(request: Request) {
@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "sessionId is required." }, { status: 400 });
   }
 
-  const session = sessionStore.get(sessionId);
+  const session = await resolveSession(sessionId);
   if (!session) {
     return NextResponse.json({ error: "Session not found or expired." }, { status: 404 });
   }
