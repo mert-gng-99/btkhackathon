@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { waitUntil } from "@vercel/functions";
 import { BinanceApiError, BinanceService } from "@/lib/binance/BinanceService";
 import { TradeNormalizer } from "@/lib/binance/TradeNormalizer";
 import { sessionStore } from "@/lib/db/sessionStore";
@@ -67,7 +68,11 @@ export const binanceSyncJobs = {
   start(input: StartSyncInput): SyncJob {
     const job = createInitialJob();
     jobs.set(job.id, job);
-    void runSyncJob(job.id, input);
+    // On Vercel, fire-and-forget promises are killed when the response is
+    // returned. waitUntil keeps the function instance alive for the duration
+    // of the background job (Hobby plan grants up to ~30s after response,
+    // matched by maxDuration on the route which extends overall to 60s).
+    waitUntil(runSyncJob(job.id, input));
     return job;
   },
 

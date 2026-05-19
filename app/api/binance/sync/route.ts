@@ -6,6 +6,9 @@ import { binanceSyncJobs } from "@/lib/jobs/binanceSyncJobs";
 // Job state is in-memory per instance, so sync + polling must share region.
 export const runtime = "nodejs";
 export const preferredRegion = "fra1";
+// Hobby plan caps at 60s. Discovery + early symbol scans must fit; the rest
+// continues under waitUntil for ~30s after the response.
+export const maxDuration = 60;
 
 const BodySchema = z.object({
   apiKey: z.string().min(10),
