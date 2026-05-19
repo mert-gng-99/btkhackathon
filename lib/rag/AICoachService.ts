@@ -215,10 +215,31 @@ export class AICoachService {
 
     const systemInstruction = [
       "You are the Gemini AI Trade Coach for a read-only Binance analytics dashboard.",
-      "Use the provided tools BEFORE answering when the user's question involves losses, worst trades, what-if simulations, revenge trading, overtrading, FOMO, averaging-down, risk budget, or behavioral patterns.",
-      "Never recommend buy, sell, hold, leverage, entries, exits, or specific assets.",
-      "Tool results are factual session data. Quote concrete numbers from them.",
-      "If a tool reports low confidence, say so in the answer."
+      "The user may ask in Turkish or English. Always answer in the same language the user used.",
+      "",
+      "CRITICAL RULE: You MUST call at least one tool before producing your final answer. Do not answer trading-behavior questions from memory alone. Even if the question seems answerable, call detect_behavior_patterns first to ground your answer in the user's actual session data.",
+      "",
+      "Trigger themes (Turkish examples included):",
+      "- losses, mistakes (hata, hatalar, zarar, kayıp, yanlış, niye batım, neden zarar, hatalı işlem)",
+      "- worst trades (en kötü işlem, en kötü trade, en büyük zarar)",
+      "- self improvement (gelişmek, gelişim, daha iyi olmak, kendimi geliştirmek, nasıl iyileştiririm, daha karlı, daha iyi işlem)",
+      "- behavioral patterns (davranış, alışkanlık, kalıp, örüntü, pattern, niye böyle)",
+      "- revenge trading, overtrading, FOMO, averaging down (intikam, aşırı işlem, fomo, ortalama düşürme)",
+      "- what-if (ya yapmasaydım, atlasaydım, keşke, varsayım)",
+      "- risk (risk, bütçe, hijyen, ne kadar riskli)",
+      "- performance (performans, başarı, başarı oranı)",
+      "",
+      "Tool selection guide:",
+      "- Question about past mistakes or losses → call get_my_worst_trades AND detect_behavior_patterns in parallel",
+      "- Question about how to improve → call detect_behavior_patterns AND risk_budget_today (add get_my_worst_trades if user mentions the past)",
+      "- 'What if I had skipped X' question → call simulate_what_if (also call get_my_worst_trades first if no ids provided)",
+      "- Any behavior, habit, or pattern question → call detect_behavior_patterns",
+      "- Today's risk / discipline question → call risk_budget_today",
+      "- Greeting or generic 'how am I doing' → call detect_behavior_patterns at minimum",
+      "",
+      "After all tool calls return, write a plain-text answer in the user's language. Quote concrete numbers from the tool outputs. Mention low confidence honestly if a tool reports it.",
+      "",
+      "Never recommend buy, sell, hold, leverage, entries, exits, or specific assets."
     ].join("\n");
 
     const prompt = JSON.stringify(
@@ -383,14 +404,14 @@ export class AICoachService {
       }
     ];
 
-    if (
-      lower.includes("revenge") ||
-      lower.includes("emotion") ||
-      lower.includes("control") ||
-      lower.includes("mistake") ||
-      lower.includes("overtrade") ||
-      lower.includes("loss")
-    ) {
+    // Turkish + English trigger keywords for each scan.
+    const has = (keywords: string[]) => keywords.some((k) => lower.includes(k));
+
+    const revengeKeywords = [
+      "revenge", "emotion", "control", "mistake", "overtrade", "loss",
+      "intikam", "duygu", "hata", "hatalı", "zarar", "kayıp", "batım", "battım"
+    ];
+    if (has(revengeKeywords)) {
       subTasks.push({
         id: "revenge_trading_scan",
         agent: "revenge_trading_agent",
@@ -398,14 +419,11 @@ export class AICoachService {
       });
     }
 
-    if (
-      lower.includes("pnl") ||
-      lower.includes("profit") ||
-      lower.includes("loss") ||
-      lower.includes("success") ||
-      lower.includes("performance") ||
-      lower.includes("başarı")
-    ) {
+    const pnlKeywords = [
+      "pnl", "profit", "loss", "success", "performance",
+      "başarı", "performans", "kar", "kâr", "karlı", "kârlı", "kazanç", "kazanc"
+    ];
+    if (has(pnlKeywords)) {
       subTasks.push({
         id: "pnl_quality_scan",
         agent: "pnl_quality_agent",
@@ -413,13 +431,11 @@ export class AICoachService {
       });
     }
 
-    if (
-      lower.includes("coin") ||
-      lower.includes("symbol") ||
-      lower.includes("asset") ||
-      lower.includes("market") ||
-      lower.includes("concentration")
-    ) {
+    const symbolKeywords = [
+      "coin", "symbol", "asset", "market", "concentration",
+      "sembol", "varlık", "varlik", "piyasa", "yoğunluk", "yogunluk", "btc", "eth"
+    ];
+    if (has(symbolKeywords)) {
       subTasks.push({
         id: "symbol_concentration_scan",
         agent: "symbol_agent",
@@ -427,14 +443,14 @@ export class AICoachService {
       });
     }
 
+    const profileKeywords = [
+      "trader", "type", "mistake", "pattern", "emotion", "profile",
+      "tip", "tür", "tur", "alışkanlık", "aliskanlik", "davranış", "davranis",
+      "gelişim", "gelisim", "gelişmek", "gelismek", "daha iyi", "iyileştir", "iyilestir"
+    ];
     if (
       traderProfile &&
-      (lower.includes("trader") ||
-        lower.includes("type") ||
-        lower.includes("mistake") ||
-        lower.includes("pattern") ||
-        lower.includes("emotion") ||
-        lower.includes("profile"))
+      has(profileKeywords)
     ) {
       subTasks.push({
         id: "profile_context",

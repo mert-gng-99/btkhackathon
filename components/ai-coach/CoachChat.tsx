@@ -62,11 +62,20 @@ function agentFromBackendName(agent: string): AgentId | null {
 
 function predictedAgentsForQuestion(question: string): AgentId[] {
   const lower = question.toLowerCase();
+  const has = (keywords: string[]) => keywords.some((k) => lower.includes(k));
   const agents = new Set<AgentId>(["rag_researcher", "behavior_analyst"]);
-  if (lower.includes("revenge") || lower.includes("emotion") || lower.includes("control") || lower.includes("mistake") || lower.includes("loss")) agents.add("revenge_trading_agent");
-  if (lower.includes("pnl") || lower.includes("profit") || lower.includes("loss") || lower.includes("success") || lower.includes("performance")) agents.add("pnl_quality_agent");
-  if (lower.includes("coin") || lower.includes("symbol") || lower.includes("asset") || lower.includes("concentration")) agents.add("symbol_agent");
-  if (lower.includes("trader") || lower.includes("type") || lower.includes("profile") || lower.includes("pattern")) agents.add("profile_analyst");
+  if (has(["revenge", "emotion", "control", "mistake", "loss", "intikam", "duygu", "hata", "zarar", "kayıp", "batım", "battım"])) {
+    agents.add("revenge_trading_agent");
+  }
+  if (has(["pnl", "profit", "loss", "success", "performance", "başarı", "performans", "kar", "kâr", "karlı", "kârlı", "kazanç"])) {
+    agents.add("pnl_quality_agent");
+  }
+  if (has(["coin", "symbol", "asset", "concentration", "sembol", "varlık", "piyasa", "yoğunluk", "btc", "eth"])) {
+    agents.add("symbol_agent");
+  }
+  if (has(["trader", "type", "profile", "pattern", "tip", "tür", "alışkanlık", "davranış", "gelişim", "gelişmek", "daha iyi", "iyileştir"])) {
+    agents.add("profile_analyst");
+  }
   return [...agents].slice(0, 4);
 }
 
