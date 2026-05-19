@@ -1,6 +1,7 @@
 import { toDateKey, toMonthKey } from "@/lib/utils/dates";
 import { round } from "@/lib/utils/numbers";
 import { splitSymbol, STABLE_QUOTE_ASSETS } from "@/lib/analytics/analyticsTypes";
+import { BehaviorPatternDetector } from "@/lib/analytics/BehaviorPatternDetector";
 import type {
   ActivityPoint,
   AnalyticsData,
@@ -52,7 +53,7 @@ export class AnalyticsService {
       return hour >= 0 && hour < 4;
     }).length;
 
-    return {
+    const result: AnalyticsData = {
       totalTrades,
       totalVolume: round(totalVolume, 2),
       averageTradeSize: totalTrades > 0 ? round(totalVolume / totalTrades, 2) : 0,
@@ -80,6 +81,9 @@ export class AnalyticsService {
       worstTrades: pnlComputation.worstTrades,
       generatedInsights
     };
+
+    result.behaviorPatterns = BehaviorPatternDetector.detect(result, sorted);
+    return result;
   }
 
   private static computeFees(trades: NormalizedTrade[]): FeeSummary[] {
