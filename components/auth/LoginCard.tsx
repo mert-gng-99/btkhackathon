@@ -32,10 +32,12 @@ export function LoginCard({ action, callbackUrl }: LoginCardProps) {
       } catch {
         // localStorage unavailable; cookie still gates middleware
       }
-      // Hard navigation guarantees the freshly-set cookie reaches the
-      // middleware on the next request — router.push can race with the
-      // cookie store on some Next.js builds.
-      window.location.assign(callbackUrl || "/dashboard");
+      // Demo cookie only unlocks /dashboard, /trades, /insights, /ai-coach
+      // — auth-only routes like /connect and /traders still require a real
+      // Google session. Always land the demo on /dashboard so the visitor
+      // doesn't bounce straight back to /login through a callbackUrl that
+      // points at one of those pages.
+      window.location.assign("/dashboard");
     } catch (err) {
       console.error("[demo] failed:", err);
       setDemoError(err instanceof Error ? err.message : t.auth.demo.failed);
