@@ -3,6 +3,12 @@ import { z } from "zod";
 import { BinanceApiError, BinanceService } from "@/lib/binance/BinanceService";
 import { safeErrorMessage } from "@/lib/security/redact";
 
+// Binance blocks Vercel's default US East IPs ("Service unavailable from a
+// restricted location"). Pin all Binance-touching routes — and the polling
+// route that shares in-memory job state — to Frankfurt.
+export const runtime = "nodejs";
+export const preferredRegion = "fra1";
+
 const BodySchema = z.object({
   apiKey: z.string().min(10),
   apiSecret: z.string().min(10)

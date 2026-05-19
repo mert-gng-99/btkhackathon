@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { binanceSyncJobs } from "@/lib/jobs/binanceSyncJobs";
 
+// Binance restricts US IPs (Vercel iad1). Frankfurt works.
+// Job state is in-memory per instance, so sync + polling must share region.
+export const runtime = "nodejs";
+export const preferredRegion = "fra1";
+
 const BodySchema = z.object({
   apiKey: z.string().min(10),
   apiSecret: z.string().min(10),
