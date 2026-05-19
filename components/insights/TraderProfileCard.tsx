@@ -5,6 +5,7 @@ import { BrainCircuit, Loader2, RefreshCw, ShieldAlert, Sparkles } from "lucide-
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
+import { useT } from "@/lib/i18n";
 import type { TraderProfile } from "@/types";
 
 interface TraderProfileCardProps {
@@ -12,6 +13,7 @@ interface TraderProfileCardProps {
 }
 
 export function TraderProfileCard({ sessionId }: TraderProfileCardProps) {
+  const t = useT();
   const [profile, setProfile] = useState<TraderProfile | null>(null);
   const [configured, setConfigured] = useState(false);
   const [cached, setCached] = useState(false);
@@ -23,19 +25,11 @@ export function TraderProfileCard({ sessionId }: TraderProfileCardProps) {
   async function loadProfile(refresh = false) {
     setLoading(true);
     setError(null);
-
     try {
-      const params = new URLSearchParams({
-        sessionId,
-        ...(refresh ? { refresh: "1" } : {})
-      });
-      const response = await fetch(`/api/insights/trader-profile?${params.toString()}`, {
-        cache: "no-store"
-      });
+      const params = new URLSearchParams({ sessionId, ...(refresh ? { refresh: "1" } : {}) });
+      const response = await fetch(`/api/insights/trader-profile?${params.toString()}`, { cache: "no-store" });
       const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Trader profile generation failed.");
-      }
+      if (!response.ok) throw new Error(payload.error ?? "Trader profile generation failed.");
       setConfigured(Boolean(payload.configured));
       setCached(Boolean(payload.cached));
       setGeneratedAt(typeof payload.generatedAt === "string" ? payload.generatedAt : null);
@@ -78,102 +72,132 @@ export function TraderProfileCard({ sessionId }: TraderProfileCardProps) {
         sessionStorage.removeItem(storageKey);
       }
     }
-
     void loadProfile(false);
   }, [sessionId]);
 
   return (
-    <Card className="overflow-hidden border-cyan-400/20">
-      <CardHeader className="bg-slate-900/70">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="rounded-md border border-cyan-400/25 bg-cyan-400/10 p-2 text-cyan-200">
+    <Card tone="cyan">
+      <CardHeader>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }} className="md:flex-row md:items-center md:justify-between">
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ padding: 8, borderRadius: 10, border: "1px solid rgba(91, 224, 230, 0.32)", background: "var(--tl-cyan-soft)", color: "var(--tl-cyan)" }}>
               <BrainCircuit className="h-5 w-5" aria-hidden="true" />
-            </div>
+            </span>
             <div>
-              <h2 className="text-lg font-semibold text-white">Gemini trader profile</h2>
-              <p className="mt-1 text-sm text-slate-500">Behavioral trader type analysis grounded in your metrics.</p>
+              <h2 className="tl-card-title">{t.insights.profile.title}</h2>
+              <p className="tl-card-sub" style={{ marginTop: 4 }}>{t.insights.profile.sub}</p>
             </div>
           </div>
-          <Button type="button" variant="secondary" onClick={() => loadProfile(true)} disabled={loading}>
+          <Button variant="secondary" onClick={() => loadProfile(true)} disabled={loading}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-4 w-4" aria-hidden="true" />}
-            Regenerate
+            {t.insights.profile.regenerate}
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-5">
-        {loading ? (
-          <div className="flex items-center gap-3 rounded-md border border-cyan-400/20 bg-cyan-400/10 p-4 text-sm text-cyan-100">
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-            Gemini is reviewing your trade behavior...
-          </div>
-        ) : null}
+      <CardContent>
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          {loading ? (
+            <div className="tl-notice tl-notice-cyan">
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              <span>{t.insights.profile.generating}</span>
+            </div>
+          ) : null}
 
-        {error ? (
-          <div className="rounded-md border border-rose-400/30 bg-rose-400/10 p-4 text-sm text-rose-100">{error}</div>
-        ) : null}
+          {error ? <div className="tl-notice tl-notice-red">{error}</div> : null}
 
-        {!configured && profile ? (
-          <div className="flex gap-3 rounded-md border border-amber-400/30 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
-            <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-            <span>Add `GEMINI_API_KEY` to `.env`, restart the dev server, and regenerate this profile.</span>
-          </div>
-        ) : null}
+          {!configured && profile ? (
+            <div className="tl-notice tl-notice-amber">
+              <ShieldAlert className="h-5 w-5" style={{ flexShrink: 0 }} aria-hidden="true" />
+              <span>{t.insights.profile.configMissing}</span>
+            </div>
+          ) : null}
 
-        {profile ? (
-          <div className="space-y-5">
-            <div className="rounded-lg border border-slate-800 bg-slate-900 p-5">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge tone="cyan">
-                  <Sparkles className="mr-1 h-3 w-3" aria-hidden="true" />
-                  {profile.traderType}
-                </Badge>
-                <Badge tone={profile.confidence === "high" ? "emerald" : profile.confidence === "medium" ? "amber" : "slate"}>
-                  {profile.confidence} confidence
-                </Badge>
-                {cached ? <Badge tone="slate">cached session profile</Badge> : null}
-                {generatedAt ? <Badge tone="slate">generated {new Date(generatedAt).toLocaleString()}</Badge> : null}
+          {profile ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+              <div className="tl-panel tl-panel-strong">
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  <Badge tone="cyan">
+                    <Sparkles className="h-3 w-3" aria-hidden="true" />
+                    {profile.traderType}
+                  </Badge>
+                  <Badge tone={profile.confidence === "high" ? "emerald" : profile.confidence === "medium" ? "amber" : "slate"}>
+                    {t.insights.profile.confidence[profile.confidence]}
+                  </Badge>
+                  {cached ? <Badge tone="slate">{t.insights.profile.cached}</Badge> : null}
+                  {generatedAt ? <Badge tone="slate">{t.insights.profile.generated} {new Date(generatedAt).toLocaleString()}</Badge> : null}
+                </div>
+                <p style={{ marginTop: 14, fontSize: 14, lineHeight: 1.6, color: "var(--tl-ink-2)" }}>{profile.summary}</p>
               </div>
-              <p className="mt-4 text-sm leading-6 text-slate-300">{profile.summary}</p>
-            </div>
 
-            <div className="grid gap-4 lg:grid-cols-2">
-              <ProfileList title="Evidence" items={profile.evidence} tone="cyan" />
-              <ProfileList title="Behavioral tags" items={profile.behavioralTags} tone="slate" />
-              <ProfileList title="Strengths" items={profile.strengths} tone="emerald" />
-              <ProfileList title="Risks to review" items={profile.risks} tone="rose" />
-            </div>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <ProfileList title={t.insights.profile.sections.evidence} items={profile.evidence} tone="cyan" empty={t.insights.profile.empty} />
+                <ProfileList title={t.insights.profile.sections.behavioralTags} items={profile.behavioralTags} tone="slate" empty={t.insights.profile.empty} />
+                <ProfileList title={t.insights.profile.sections.strengths} items={profile.strengths} tone="emerald" empty={t.insights.profile.empty} />
+                <ProfileList title={t.insights.profile.sections.risks} items={profile.risks} tone="rose" empty={t.insights.profile.empty} />
+              </div>
 
-            <div className="rounded-lg border border-amber-400/20 bg-amber-400/10 p-4">
-              <p className="text-sm font-semibold text-amber-100">Reflection questions</p>
-              <div className="mt-3 grid gap-2 md:grid-cols-2">
-                {profile.reflectionQuestions.map((question) => (
-                  <div key={question} className="rounded-md border border-amber-400/20 bg-slate-950/70 px-3 py-2 text-sm leading-6 text-amber-50/90">
-                    {question}
-                  </div>
-                ))}
+              <div className="tl-panel tl-tone-amber">
+                <p style={{ fontWeight: 600, color: "#FFE3AC", fontSize: 14 }}>{t.insights.profile.sections.reflection}</p>
+                <div className="grid gap-2 md:grid-cols-2" style={{ marginTop: 10 }}>
+                  {profile.reflectionQuestions.map((question) => (
+                    <div
+                      key={question}
+                      className="tl-panel"
+                      style={{
+                        borderColor: "rgba(245, 181, 68, 0.25)",
+                        background: "rgba(6, 10, 20, 0.45)",
+                        color: "rgba(255, 240, 200, 0.92)",
+                        fontSize: 13.5,
+                        lineHeight: 1.6
+                      }}
+                    >
+                      {question}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </CardContent>
     </Card>
   );
 }
 
-function ProfileList({ title, items, tone }: { title: string; items: string[]; tone: "cyan" | "emerald" | "rose" | "slate" }) {
+function ProfileList({
+  title,
+  items,
+  tone,
+  empty
+}: {
+  title: string;
+  items: string[];
+  tone: "cyan" | "emerald" | "rose" | "slate";
+  empty: string;
+}) {
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900/75 p-4">
+    <div className="tl-panel">
       <Badge tone={tone}>{title}</Badge>
-      <div className="mt-3 space-y-2">
+      <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
         {items.length > 0 ? (
           items.map((item) => (
-            <div key={item} className="rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm leading-6 text-slate-300">
+            <div
+              key={item}
+              style={{
+                padding: "8px 12px",
+                borderRadius: 10,
+                border: "1px solid var(--tl-line)",
+                background: "rgba(6, 10, 20, 0.5)",
+                fontSize: 13,
+                lineHeight: 1.55,
+                color: "var(--tl-ink-2)"
+              }}
+            >
               {item}
             </div>
           ))
         ) : (
-          <p className="text-sm text-slate-500">No items generated.</p>
+          <p style={{ fontSize: 13, color: "var(--tl-ink-3)" }}>{empty}</p>
         )}
       </div>
     </div>

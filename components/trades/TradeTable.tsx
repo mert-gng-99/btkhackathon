@@ -5,6 +5,7 @@ import { Download, Search } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { useT } from "@/lib/i18n";
 import { formatDateTime } from "@/lib/utils/dates";
 import { formatNumber } from "@/lib/utils/numbers";
 import type { NormalizedTrade, TradeSide } from "@/types";
@@ -17,6 +18,7 @@ interface TradeTableProps {
 }
 
 export function TradeTable({ trades, sessionId }: TradeTableProps) {
+  const t = useT();
   const [search, setSearch] = useState("");
   const [symbol, setSymbol] = useState("ALL");
   const [side, setSide] = useState<TradeSide | "ALL">("ALL");
@@ -36,7 +38,6 @@ export function TradeTable({ trades, sessionId }: TradeTableProps) {
       const matchesSide = side === "ALL" || trade.side === side;
       return matchesSearch && matchesSymbol && matchesSide;
     });
-
     return [...rows].sort((a, b) => {
       const aValue = sortKey === "timestamp" || sortKey === "symbol" ? a[sortKey] : Number(a[sortKey]);
       const bValue = sortKey === "timestamp" || sortKey === "symbol" ? b[sortKey] : Number(b[sortKey]);
@@ -61,101 +62,99 @@ export function TradeTable({ trades, sessionId }: TradeTableProps) {
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }} className="lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-base font-semibold text-white">All normalized trades</h2>
-            <p className="mt-1 text-sm text-slate-500">{filtered.length} of {trades.length} trades shown</p>
+            <h2 className="tl-card-title">{t.trades.table.title}</h2>
+            <p className="tl-card-sub" style={{ marginTop: 4 }}>{t.trades.table.countShown(filtered.length, trades.length)}</p>
           </div>
-          <Button type="button" variant="secondary" onClick={exportCsv}>
+          <Button variant="secondary" onClick={exportCsv}>
             <Download className="h-4 w-4" aria-hidden="true" />
-            Export CSV
+            {t.trades.table.export}
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid gap-3 lg:grid-cols-[1fr_180px_160px]">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-9 h-4 w-4 text-slate-500" aria-hidden="true" />
-            <Input label="Search" value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" placeholder="Symbol, order ID, trade ID" />
+      <CardContent>
+        <div className="grid gap-3 lg:grid-cols-[1fr_180px_160px]" style={{ marginBottom: 18 }}>
+          <div style={{ position: "relative" }}>
+            <Search style={{ position: "absolute", left: 12, top: 36, width: 16, height: 16, color: "var(--tl-ink-3)", pointerEvents: "none" }} aria-hidden="true" />
+            <Input
+              label={t.trades.table.searchLabel}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t.trades.table.searchPlaceholder}
+              style={{ paddingLeft: 36 }}
+            />
           </div>
           <label className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-200">Symbol</span>
-            <select
-              value={symbol}
-              onChange={(event) => setSymbol(event.target.value)}
-              className="h-10 w-full cursor-pointer rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-white outline-none focus:border-cyanData"
-            >
-              <option value="ALL">All symbols</option>
+            <span className="tl-label">{t.trades.table.symbolLabel}</span>
+            <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className="tl-input" style={{ cursor: "pointer" }}>
+              <option value="ALL">{t.trades.table.allSymbols}</option>
               {symbols.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
+                <option key={item} value={item}>{item}</option>
               ))}
             </select>
           </label>
           <label className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-200">Side</span>
-            <select
-              value={side}
-              onChange={(event) => setSide(event.target.value as TradeSide | "ALL")}
-              className="h-10 w-full cursor-pointer rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-white outline-none focus:border-cyanData"
-            >
-              <option value="ALL">All sides</option>
-              <option value="BUY">Buy</option>
-              <option value="SELL">Sell</option>
+            <span className="tl-label">{t.trades.table.sideLabel}</span>
+            <select value={side} onChange={(e) => setSide(e.target.value as TradeSide | "ALL")} className="tl-input" style={{ cursor: "pointer" }}>
+              <option value="ALL">{t.trades.table.allSides}</option>
+              <option value="BUY">{t.trades.table.buy}</option>
+              <option value="SELL">{t.trades.table.sell}</option>
             </select>
           </label>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-[1080px] w-full border-collapse text-left text-sm">
+        <div className="tl-table-wrap">
+          <table className="tl-table">
             <thead>
-              <tr className="border-b border-slate-800 text-xs uppercase tracking-wide text-slate-500">
+              <tr>
                 {[
-                  ["timestamp", "Time"],
-                  ["symbol", "Symbol"],
-                  ["price", "Price"],
-                  ["quantity", "Qty"],
-                  ["quoteQuantity", "Quote"],
-                  ["fee", "Fee"]
+                  ["timestamp", t.trades.table.time],
+                  ["symbol", t.trades.table.symbol],
+                  ["price", t.trades.table.price],
+                  ["quantity", t.trades.table.qty],
+                  ["quoteQuantity", t.trades.table.quote],
+                  ["fee", t.trades.table.fee]
                 ].map(([key, label]) => (
-                  <th key={key} className="py-3 pr-4">
-                    <button type="button" onClick={() => toggleSort(key as SortKey)} className="cursor-pointer text-left hover:text-white">
-                      {label}
-                    </button>
+                  <th key={key}>
+                    <button type="button" onClick={() => toggleSort(key as SortKey)}>{label}</button>
                   </th>
                 ))}
-                <th className="py-3 pr-4">Side</th>
-                <th className="py-3 pr-4">Market</th>
-                <th className="py-3 pr-4">Order</th>
+                <th>{t.trades.table.sideCol}</th>
+                <th>{t.trades.table.market}</th>
+                <th>{t.trades.table.order}</th>
               </tr>
             </thead>
             <tbody>
               {filtered.slice(0, 500).map((trade) => (
-                <tr key={trade.id} className="border-b border-slate-900 text-slate-300 hover:bg-slate-900/70">
-                  <td className="whitespace-nowrap py-3 pr-4 text-slate-400">{formatDateTime(trade.timestamp)}</td>
-                  <td className="py-3 pr-4 font-medium text-white">{trade.symbol}</td>
-                  <td className="numeric py-3 pr-4">{formatNumber(trade.price, { maximumFractionDigits: 8 })}</td>
-                  <td className="numeric py-3 pr-4">{formatNumber(trade.quantity, { maximumFractionDigits: 8 })}</td>
-                  <td className="numeric py-3 pr-4">{formatNumber(trade.quoteQuantity)}</td>
-                  <td className="numeric py-3 pr-4">{formatNumber(trade.fee, { maximumFractionDigits: 8 })} {trade.feeAsset}</td>
-                  <td className="py-3 pr-4">
-                    <span className={`rounded-md px-2 py-1 text-xs font-semibold ${trade.side === "BUY" ? "bg-emerald-400/10 text-emerald-200" : "bg-rose-400/10 text-rose-200"}`}>
-                      {trade.side}
+                <tr key={trade.id}>
+                  <td style={{ whiteSpace: "nowrap", color: "var(--tl-ink-3)" }}>{formatDateTime(trade.timestamp)}</td>
+                  <td className="tl-table-symbol">{trade.symbol}</td>
+                  <td className="tl-numeric">{formatNumber(trade.price, { maximumFractionDigits: 8 })}</td>
+                  <td className="tl-numeric">{formatNumber(trade.quantity, { maximumFractionDigits: 8 })}</td>
+                  <td className="tl-numeric">{formatNumber(trade.quoteQuantity)}</td>
+                  <td className="tl-numeric">
+                    {formatNumber(trade.fee, { maximumFractionDigits: 8 })} {trade.feeAsset}
+                  </td>
+                  <td>
+                    <span className={trade.side === "BUY" ? "tl-pill tl-pill-buy" : "tl-pill tl-pill-sell"}>
+                      {trade.side === "BUY" ? t.trades.table.buy : t.trades.table.sell}
                     </span>
                   </td>
-                  <td className="py-3 pr-4">
-                    <span className="rounded-md bg-cyan-400/10 px-2 py-1 text-xs font-semibold text-cyan-100">
-                      {trade.marketType === "spot" ? "Spot" : trade.marketType === "um_futures" ? "USD-M" : "COIN-M"}
+                  <td>
+                    <span className="tl-pill" style={{ background: "rgba(91, 224, 230, 0.1)", color: "#C7F4F7", borderColor: "rgba(91, 224, 230, 0.3)" }}>
+                      {trade.marketType === "spot" ? t.trades.market.spot : trade.marketType === "um_futures" ? t.trades.market.um : t.trades.market.coin}
                     </span>
                   </td>
-                  <td className="py-3 pr-4 text-slate-500">{trade.orderId}</td>
+                  <td style={{ color: "var(--tl-ink-3)" }}>{trade.orderId}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        {filtered.length > 500 ? <p className="text-xs text-slate-500">Showing first 500 filtered rows for browser performance. Export CSV includes all rows.</p> : null}
+        {filtered.length > 500 ? (
+          <p style={{ marginTop: 10, fontSize: 12, color: "var(--tl-ink-3)" }}>{t.trades.table.truncated}</p>
+        ) : null}
       </CardContent>
     </Card>
   );

@@ -2,58 +2,140 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
-import { BarChart3, BrainCircuit, ListFilter, LockKeyhole, ShieldCheck, UsersRound } from "lucide-react";
-import { cn } from "@/lib/utils/cn";
+import { useEffect, useState, type ReactNode } from "react";
+import { BarChart3, BrainCircuit, ListFilter, LockKeyhole, Menu, ShieldCheck, UsersRound, X } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
-const navItems = [
-  { href: "/connect", label: "Connect", icon: LockKeyhole },
-  { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
-  { href: "/trades", label: "Trades", icon: ListFilter },
-  { href: "/insights", label: "Insights", icon: ShieldCheck },
-  { href: "/ai-coach", label: "AI Coach", icon: BrainCircuit },
-  { href: "/traders", label: "Traders", icon: UsersRound }
+const navIcons = {
+  connect: LockKeyhole,
+  dashboard: BarChart3,
+  trades: ListFilter,
+  insights: ShieldCheck,
+  aiCoach: BrainCircuit,
+  traders: UsersRound
+} as const;
+
+const navOrder: Array<{ href: string; key: keyof typeof navIcons }> = [
+  { href: "/connect", key: "connect" },
+  { href: "/dashboard", key: "dashboard" },
+  { href: "/trades", key: "trades" },
+  { href: "/insights", key: "insights" },
+  { href: "/ai-coach", key: "aiCoach" },
+  { href: "/traders", key: "traders" }
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const { locale, toggleLocale, dict } = useI18n();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  // Reveal-on-scroll: any element with data-reveal fades+slides up when entering view.
+  useEffect(() => {
+    if (pathname === "/") return;
+    const elements = document.querySelectorAll<HTMLElement>("[data-reveal]:not(.in)");
+    if (elements.length === 0) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("in");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.08, rootMargin: "0px 0px -10% 0px" }
+    );
+    elements.forEach((el) => observer.observe(el));
+
+    // Pre-mark anything already on-screen so first paint is not blank.
+    requestAnimationFrame(() => {
+      elements.forEach((el) => {
+        const rect = el.getBoundingClientRect();
+        if (rect.top < window.innerHeight && rect.bottom > 0) {
+          el.classList.add("in");
+        }
+      });
+    });
+
+    return () => observer.disconnect();
+  }, [pathname]);
+
+  if (pathname === "/") {
+    return <>{children}</>;
+  }
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/82 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
-          <Link href="/" className="flex cursor-pointer items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-md border border-amber-400/30 bg-amber-400/10">
-              <ShieldCheck className="h-5 w-5 text-amber-300" aria-hidden="true" />
-            </span>
-              <span>
-              <span className="block text-sm font-semibold text-white">ReadOnly Alpha</span>
-              <span className="block text-xs text-slate-500">Spot & Futures analytics</span>
-            </span>
+    <div className="app-shell">
+      <header>
+        <div className="tl-topbar">
+          <Link href="/" className="tl-brand" aria-label={dict.common.appName}>
+            <span className="tl-brand-mark" aria-hidden="true" />
+            <span>{dict.common.appName}</span>
+            <span className="tl-brand-meta">{dict.common.version}</span>
           </Link>
 
-          <nav className="flex gap-1 overflow-x-auto pb-1 lg:pb-0" aria-label="Main navigation">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const active = pathname === item.href;
+          <nav className="tl-topnav" aria-label="Main">
+            {navOrder.map(({ href, key }) => {
+              const Icon = navIcons[key];
+              const active = pathname === href;
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex min-h-10 cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-slate-400 transition-colors duration-200 hover:bg-slate-800 hover:text-white",
-                    active && "bg-slate-800 text-white"
-                  )}
-                >
-                  <Icon className="h-4 w-4" aria-hidden="true" />
-                  {item.label}
+                <Link key={href} href={href} className={active ? "active" : ""}>
+                  <Icon className="tl-topnav-icon" aria-hidden="true" />
+                  {dict.nav[key]}
                 </Link>
               );
             })}
           </nav>
+
+          <div className="tl-top-actions">
+            <button
+              type="button"
+              className="tl-lang-toggle"
+              onClick={toggleLocale}
+              aria-label={dict.language.toggleLabel}
+              title={dict.language.toggleLabel}
+            >
+              <span className={locale === "en" ? "tl-lang-active" : ""}>{dict.language.short.en}</span>
+              <span aria-hidden="true">·</span>
+              <span className={locale === "tr" ? "tl-lang-active" : ""}>{dict.language.short.tr}</span>
+            </button>
+
+            <button
+              type="button"
+              className="tl-mobile-menu-btn"
+              aria-label="Menu"
+              aria-expanded={mobileOpen}
+              onClick={() => setMobileOpen((v) => !v)}
+            >
+              {mobileOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
+            </button>
+          </div>
         </div>
+
+        {mobileOpen ? (
+          <nav className="tl-mobile-nav" aria-label="Mobile">
+            {navOrder.map(({ href, key }) => {
+              const Icon = navIcons[key];
+              const active = pathname === href;
+              return (
+                <Link key={href} href={href} className={active ? "active" : ""} onClick={() => setMobileOpen(false)}>
+                  <Icon className="tl-topnav-icon" aria-hidden="true" />
+                  {dict.nav[key]}
+                </Link>
+              );
+            })}
+          </nav>
+        ) : null}
       </header>
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">{children}</main>
+
+      <main className="tl-main">
+        <div className="tl-grid-overlay" aria-hidden="true" />
+        <div className="tl-content">{children}</div>
+      </main>
     </div>
   );
 }
