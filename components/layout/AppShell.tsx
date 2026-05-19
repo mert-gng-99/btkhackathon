@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { BarChart3, BrainCircuit, ListFilter, LockKeyhole, Menu, ShieldCheck, UsersRound, X } from "lucide-react";
+import { BarChart3, BrainCircuit, ListFilter, LockKeyhole, Menu, Palette, ShieldCheck, UsersRound, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useTheme } from "@/lib/theme";
+import { UserMenu } from "@/components/auth/UserMenu";
 
 const navIcons = {
   connect: LockKeyhole,
@@ -27,6 +29,7 @@ const navOrder: Array<{ href: string; key: keyof typeof navIcons }> = [
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { locale, toggleLocale, dict } = useI18n();
+  const { theme, cycleTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
@@ -78,7 +81,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="tl-brand-meta">{dict.common.version}</span>
           </Link>
 
-          <nav className="tl-topnav" aria-label="Main">
+          <nav className="tl-topnav" aria-label={dict.a11y.mainNav}>
             {navOrder.map(({ href, key }) => {
               const Icon = navIcons[key];
               const active = pathname === href;
@@ -95,6 +98,17 @@ export function AppShell({ children }: { children: ReactNode }) {
             <button
               type="button"
               className="tl-lang-toggle"
+              onClick={cycleTheme}
+              aria-label={dict.theme.toggleLabel}
+              title={`${dict.theme.toggleLabel}: ${theme === "sand" ? dict.theme.sand : dict.theme.cinematic}`}
+            >
+              <Palette className="h-3.5 w-3.5" aria-hidden="true" />
+              <span className="tl-lang-active">{theme === "sand" ? dict.theme.short.sand : dict.theme.short.cinematic}</span>
+            </button>
+
+            <button
+              type="button"
+              className="tl-lang-toggle"
               onClick={toggleLocale}
               aria-label={dict.language.toggleLabel}
               title={dict.language.toggleLabel}
@@ -104,10 +118,12 @@ export function AppShell({ children }: { children: ReactNode }) {
               <span className={locale === "tr" ? "tl-lang-active" : ""}>{dict.language.short.tr}</span>
             </button>
 
+            <UserMenu />
+
             <button
               type="button"
               className="tl-mobile-menu-btn"
-              aria-label="Menu"
+              aria-label={dict.a11y.menu}
               aria-expanded={mobileOpen}
               onClick={() => setMobileOpen((v) => !v)}
             >
@@ -117,7 +133,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         {mobileOpen ? (
-          <nav className="tl-mobile-nav" aria-label="Mobile">
+          <nav className="tl-mobile-nav" aria-label={dict.a11y.mobileNav}>
             {navOrder.map(({ href, key }) => {
               const Icon = navIcons[key];
               const active = pathname === href;

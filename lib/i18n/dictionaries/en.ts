@@ -26,6 +26,12 @@ export const en = {
     turkish: "Türkçe",
     short: { en: "EN", tr: "TR" }
   },
+  theme: {
+    toggleLabel: "Theme",
+    cinematic: "Cinematic",
+    sand: "Sand",
+    short: { cinematic: "CIN", sand: "SND" }
+  },
   nav: {
     connect: "Connect",
     dashboard: "Dashboard",
@@ -369,7 +375,9 @@ export const en = {
         reflection: "Self-check questions"
       },
       empty: "No items generated."
-    }
+    },
+    sceneLabel: "insight-radar.loop",
+    signalsLabel: (n: number) => `${n} signals`
   },
   // ---- AI Coach page ----
   aiCoach: {
@@ -423,7 +431,30 @@ export const en = {
         "Validator agent is checking the draft...",
         "Adding validator fixes if needed...",
         "Making the final PDF..."
-      ]
+      ],
+      reportFlow: {
+        title: "Building your evidence-grade report",
+        sub: "Five pipeline stages. The validator stage cross-checks every claim against your trade data before the PDF is signed.",
+        stages: [
+          { title: "Gather", sub: "Coach answers + sub-agent traces" },
+          { title: "Draft", sub: "Gemini writes the report sections" },
+          { title: "Validate", sub: "Cross-checking every claim vs your trade data" },
+          { title: "Apply fixes", sub: "Validator-driven corrections" },
+          { title: "Finalize", sub: "Sign + package the PDF" }
+        ],
+        validatorBadge: "VALIDATOR",
+        scanLabel: "Scanning claims",
+        claimVerified: "verified",
+        claimsCounter: (verified: number, total: number) => `${verified} / ${total} claims verified`,
+        sampleClaims: [
+          "Top BTCUSDT fees · Oct",
+          "Rapid trade clusters · 9 hits",
+          "Spot PnL estimate · +1,284 USDT",
+          "Late-night ratio · 18%",
+          "Symbol concentration · 62%"
+        ],
+        done: "Verified. PDF ready."
+      }
     }
   },
   // ---- Traders page ----
@@ -454,7 +485,48 @@ export const en = {
     topSymbols: "Top symbols",
     behaviorTags: "Behavior tags",
     follow: "Follow",
-    following: "Following"
+    following: "Following",
+    sceneLabel: "trader-network.loop",
+    peersLabel: (n: number) => `${n} peers`
+  },
+  // ---- Auth ----
+  auth: {
+    signIn: "Sign in",
+    signOut: "Sign out",
+    accountFallback: "Account",
+    welcome: {
+      title: "Welcome back",
+      sub: "Sign in to connect your read-only Binance keys and unlock the AI coach.",
+      continueWithGoogle: "Continue with Google",
+      consent: "By signing in you agree to anonymous-only sharing of your trader profile."
+    },
+    demo: {
+      divider: "or",
+      tryDemo: "Try with demo data",
+      tryDemoSub: "No sign-in. Synthetic Binance history.",
+      loading: "Preparing demo session...",
+      failed: "Demo failed. Please try again."
+    }
+  },
+  // ---- Errors (user-facing toast/notice strings) ----
+  errors: {
+    unknownError: "Something went wrong.",
+    validationFailed: "Validation failed.",
+    syncFailed: "Sync failed.",
+    syncProgressRead: "Could not read sync progress.",
+    syncNoSession: "Sync completed without a session.",
+    demoFailed: "Demo failed.",
+    profileGenerationFailed: "Trader profile generation failed.",
+    profileRequestFailed: "Trader profile request failed.",
+    coachRequestFailed: "Coach request failed.",
+    pdfGenerationFailed: "PDF report generation failed.",
+    similarTradersFailed: "Failed to load similar traders."
+  },
+  // ---- Accessibility (aria-labels, screen reader only) ----
+  a11y: {
+    mainNav: "Main",
+    mobileNav: "Mobile",
+    menu: "Menu"
   },
   // ---- Session gate ----
   sessionGate: {

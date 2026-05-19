@@ -4,6 +4,10 @@ import { Inter_Tight, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
 import { I18nProvider } from "@/lib/i18n";
+import { ThemeProvider } from "@/lib/theme";
+import { SessionProviderWrapper } from "@/components/auth/SessionProviderWrapper";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const interTight = Inter_Tight({
   subsets: ["latin"],
@@ -25,13 +29,24 @@ export const metadata: Metadata = {
     "Safe, read-only Binance trade view with a smart AI coach. Spot, USD-M Futures, and COIN-M Futures."
 };
 
+const themeBootstrap = `(function(){try{var t=localStorage.getItem('tradeAnalyticsTheme');if(t==='sand'){document.documentElement.setAttribute('data-theme','sand');}}catch(e){}})();`;
+
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en" className={`${interTight.variable} ${jetbrainsMono.variable}`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
+      </head>
       <body>
-        <I18nProvider defaultLocale="en">
-          <AppShell>{children}</AppShell>
-        </I18nProvider>
+        <SessionProviderWrapper>
+          <I18nProvider defaultLocale="en">
+            <ThemeProvider defaultTheme="cinematic">
+              <AppShell>{children}</AppShell>
+            </ThemeProvider>
+          </I18nProvider>
+        </SessionProviderWrapper>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { CoachPdfReportService } from "@/lib/ai/CoachPdfReportService";
 import { TraderProfileService } from "@/lib/ai/TraderProfileService";
 import { sessionStore } from "@/lib/db/sessionStore";
+import { resolveSession } from "@/lib/db/sessionResolver";
 import type { AiCoachAnswer } from "@/types";
 
 const AnswerSchema = z.object({
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "sessionId and at least one coach answer are required." }, { status: 400 });
   }
 
-  const session = sessionStore.get(parsed.data.sessionId);
+  const session = await resolveSession(parsed.data.sessionId);
   if (!session) {
     return NextResponse.json({ error: "Session not found or expired." }, { status: 404 });
   }

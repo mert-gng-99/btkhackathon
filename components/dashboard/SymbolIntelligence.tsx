@@ -18,7 +18,7 @@ export function SymbolIntelligence({ analytics, trades }: SymbolIntelligenceProp
   const latestTrades = [...trades].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 8);
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[1.25fr_0.75fr]">
+    <div className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
       <Card>
         <CardHeader>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>

@@ -29,7 +29,7 @@ export function TraderProfileCard({ sessionId }: TraderProfileCardProps) {
       const params = new URLSearchParams({ sessionId, ...(refresh ? { refresh: "1" } : {}) });
       const response = await fetch(`/api/insights/trader-profile?${params.toString()}`, { cache: "no-store" });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error ?? "Trader profile generation failed.");
+      if (!response.ok) throw new Error(payload.error ?? t.errors.profileGenerationFailed);
       setConfigured(Boolean(payload.configured));
       setCached(Boolean(payload.cached));
       setGeneratedAt(typeof payload.generatedAt === "string" ? payload.generatedAt : null);
@@ -44,7 +44,7 @@ export function TraderProfileCard({ sessionId }: TraderProfileCardProps) {
         })
       );
     } catch (profileError: unknown) {
-      setError(profileError instanceof Error ? profileError.message : "Trader profile generation failed.");
+      setError(profileError instanceof Error ? profileError.message : t.errors.profileGenerationFailed);
     } finally {
       setLoading(false);
     }

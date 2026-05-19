@@ -4,6 +4,7 @@ import { AICoachService } from "@/lib/rag/AICoachService";
 import { ChunkBuilder } from "@/lib/rag/ChunkBuilder";
 import { VectorStoreService } from "@/lib/rag/VectorStoreService";
 import { sessionStore } from "@/lib/db/sessionStore";
+import { resolveSession } from "@/lib/db/sessionResolver";
 import { TraderProfileService } from "@/lib/ai/TraderProfileService";
 import { anonymousTraderRegistry } from "@/lib/traders/AnonymousTraderRegistry";
 
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "A session and question are required." }, { status: 400 });
   }
 
-  const session = sessionStore.get(parsed.data.sessionId);
+  const session = await resolveSession(parsed.data.sessionId);
   if (!session) {
     return NextResponse.json({ error: "Session not found or expired." }, { status: 404 });
   }

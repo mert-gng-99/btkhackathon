@@ -3,7 +3,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import {
   Activity,
-  AlertTriangle,
   Bot,
   BrainCircuit,
   CheckCircle2,
@@ -24,6 +23,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { useT } from "@/lib/i18n";
 import { SUGGESTED_COACH_QUESTIONS } from "@/lib/rag/ragTypes";
 import type { AiCoachAnswer, AnalyticsData, TraderProfile } from "@/types";
+import { PdfReportProgress } from "./PdfReportProgress";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -121,7 +121,7 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
       try {
         const response = await fetch(`/api/insights/trader-profile?sessionId=${encodeURIComponent(sessionId)}`, { cache: "no-store" });
         const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error ?? "Trader profile request failed.");
+        if (!response.ok) throw new Error(payload.error ?? t.errors.profileRequestFailed);
         if (!cancelled) {
           setProfile(payload.profile);
           sessionStorage.setItem(
@@ -175,7 +175,7 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
         body: JSON.stringify({ sessionId, question: trimmed })
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error ?? "Coach request failed.");
+      if (!response.ok) throw new Error(payload.error ?? t.errors.coachRequestFailed);
 
       if (payload.answer?.traderProfile) {
         setProfile(payload.answer.traderProfile);
@@ -199,7 +199,7 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
       setAgentStatus(t.aiCoach.sidebar.completed(completed.length));
       setMessages((current) => [...current, { role: "assistant", content: payload.answer.answer, answer: payload.answer }]);
     } catch (chatError: unknown) {
-      setError(chatError instanceof Error ? chatError.message : "Coach request failed.");
+      setError(chatError instanceof Error ? chatError.message : t.errors.coachRequestFailed);
       setActiveAgents([]);
       setAgentStatus(null);
     } finally {
@@ -237,7 +237,7 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
 
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
-        throw new Error(payload?.error ?? "PDF report generation failed.");
+        throw new Error(payload?.error ?? t.errors.pdfGenerationFailed);
       }
 
       const blob = await response.blob();
@@ -252,7 +252,7 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
       setReportStep(REPORT_STEPS.length - 1);
       setReportMessage(t.aiCoach.chat.pdfDone);
     } catch (reportGenerationError: unknown) {
-      setReportError(reportGenerationError instanceof Error ? reportGenerationError.message : "PDF report generation failed.");
+      setReportError(reportGenerationError instanceof Error ? reportGenerationError.message : t.errors.pdfGenerationFailed);
     } finally {
       setReportLoading(false);
     }
@@ -262,7 +262,7 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
   const steps = t.aiCoach.sidebar.pipelineSteps;
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[0.72fr_1.28fr]">
+    <div className="grid gap-5 lg:grid-cols-[0.72fr_1.28fr]">
       <aside style={{ display: "flex", flexDirection: "column", gap: 18 }}>
         <Card tone="cyan">
           <CardHeader>
@@ -427,16 +427,16 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
           </div>
 
           <div
+            className="mt-4 sm:mt-5"
             style={{
-              marginTop: 18,
-              minHeight: 540,
-              maxHeight: 820,
-              height: "72vh",
+              minHeight: "min(60vh, 540px)",
+              maxHeight: "min(72vh, 820px)",
+              height: "clamp(420px, 60vh, 820px)",
               overflowY: "auto",
               padding: 16,
               borderRadius: 14,
               border: "1px solid var(--tl-line)",
-              background: "rgba(6, 10, 20, 0.55)",
+              background: "color-mix(in srgb, var(--tl-bg-0) 55%, transparent)",
               display: "flex",
               flexDirection: "column",
               gap: 16
@@ -447,7 +447,7 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
                 key={`${message.role}-${index}`}
                 style={{
                   alignSelf: message.role === "user" ? "flex-end" : "flex-start",
-                  maxWidth: message.role === "user" ? "86%" : "96%",
+                  maxWidth: message.role === "user" ? "min(92%, 560px)" : "100%",
                   width: message.role === "user" ? "auto" : "100%"
                 }}
               >
@@ -519,16 +519,12 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
 
           {error ? <div className="tl-notice tl-notice-red" style={{ marginTop: 14 }}>{error}</div> : null}
           {reportLoading || reportMessage || reportError ? (
-            <div className={`tl-notice ${reportError ? "tl-notice-red" : "tl-notice-green"}`} style={{ marginTop: 14 }}>
-              {reportLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              ) : reportError ? (
-                <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-              ) : (
-                <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-              )}
-              <span>{reportLoading ? REPORT_STEPS[reportStep] : reportError ?? reportMessage}</span>
-            </div>
+            <PdfReportProgress
+              step={reportStep}
+              loading={reportLoading}
+              doneMessage={reportMessage}
+              error={reportError}
+            />
           ) : null}
 
           <form

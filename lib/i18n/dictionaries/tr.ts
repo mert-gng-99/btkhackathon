@@ -28,6 +28,12 @@ export const tr: Dictionary = {
     turkish: "Türkçe",
     short: { en: "EN", tr: "TR" }
   },
+  theme: {
+    toggleLabel: "Tema",
+    cinematic: "Sinematik",
+    sand: "Kum",
+    short: { cinematic: "SİN", sand: "KUM" }
+  },
   nav: {
     connect: "Bağlan",
     dashboard: "Panel",
@@ -366,7 +372,9 @@ export const tr: Dictionary = {
         reflection: "Öz-değerlendirme soruları"
       },
       empty: "Öğe oluşturulamadı."
-    }
+    },
+    sceneLabel: "insight-radar.loop",
+    signalsLabel: (n: number) => `${n} sinyal`
   },
   aiCoach: {
     badge: "Gemini ajan grubu",
@@ -419,7 +427,30 @@ export const tr: Dictionary = {
         "Doğrulayıcı ajan taslağı kontrol ediyor...",
         "Gerekirse doğrulayıcı düzeltmeleri uygulanıyor...",
         "Son PDF hazırlanıyor..."
-      ]
+      ],
+      reportFlow: {
+        title: "Kanıta dayalı raporun hazırlanıyor",
+        sub: "Beş adımlı bir hat. Doğrulayıcı adımı, PDF imzalanmadan önce her iddiayı senin işlem verinle çapraz kontrol eder.",
+        stages: [
+          { title: "Topla", sub: "Koç cevapları + alt ajan izleri" },
+          { title: "Taslak", sub: "Gemini rapor bölümlerini yazar" },
+          { title: "Doğrula", sub: "Her iddia senin verine karşı kontrol edilir" },
+          { title: "Düzelt", sub: "Doğrulayıcı düzeltmeleri uygulanır" },
+          { title: "Bitir", sub: "PDF imzalanır ve paketlenir" }
+        ],
+        validatorBadge: "DOĞRULAYICI",
+        scanLabel: "İddialar taranıyor",
+        claimVerified: "doğrulandı",
+        claimsCounter: (verified: number, total: number) => `${verified} / ${total} iddia doğrulandı`,
+        sampleClaims: [
+          "En çok BTCUSDT ücretleri · Ekim",
+          "Hızlı işlem grupları · 9 vuruş",
+          "Spot PnL tahmini · +1,284 USDT",
+          "Gece işlem oranı · %18",
+          "Sembol yoğunluğu · %62"
+        ],
+        done: "Doğrulandı. PDF hazır."
+      }
     }
   },
   traders: {
@@ -449,7 +480,45 @@ export const tr: Dictionary = {
     topSymbols: "Top semboller",
     behaviorTags: "Davranış etiketleri",
     follow: "Takip et",
-    following: "Takipte"
+    following: "Takipte",
+    sceneLabel: "trader-network.loop",
+    peersLabel: (n: number) => `${n} eş`
+  },
+  auth: {
+    signIn: "Giriş yap",
+    signOut: "Çıkış yap",
+    accountFallback: "Hesap",
+    welcome: {
+      title: "Tekrar hoş geldin",
+      sub: "Sadece okuma yetkili Binance anahtarlarını bağlamak ve AI koçu açmak için giriş yap.",
+      continueWithGoogle: "Google ile devam et",
+      consent: "Giriş yaparak trader profilinin sadece anonim olarak paylaşılmasını kabul ediyorsun."
+    },
+    demo: {
+      divider: "veya",
+      tryDemo: "Demo veriyle dene",
+      tryDemoSub: "Giriş gerekmez. Yapay Binance geçmişi.",
+      loading: "Demo oturumu hazırlanıyor...",
+      failed: "Demo başarısız. Tekrar dene."
+    }
+  },
+  errors: {
+    unknownError: "Bir şeyler ters gitti.",
+    validationFailed: "Doğrulama başarısız.",
+    syncFailed: "Senkronizasyon başarısız.",
+    syncProgressRead: "Senkron ilerlemesi okunamadı.",
+    syncNoSession: "Senkron oturum oluşturmadan tamamlandı.",
+    demoFailed: "Demo başarısız.",
+    profileGenerationFailed: "Trader profili oluşturulamadı.",
+    profileRequestFailed: "Trader profili isteği başarısız.",
+    coachRequestFailed: "Koç isteği başarısız.",
+    pdfGenerationFailed: "PDF rapor oluşturma başarısız.",
+    similarTradersFailed: "Benzer trader'lar yüklenemedi."
+  },
+  a11y: {
+    mainNav: "Ana menü",
+    mobileNav: "Mobil menü",
+    menu: "Menü"
   },
   sessionGate: {
     loading: "Analizin yükleniyor...",

@@ -29,10 +29,10 @@ function cleanupExpired(): void {
 }
 
 export const sessionStore = {
-  createFromTrades(trades: NormalizedTrade[], warnings: string[] = []): StoredSession {
+  createFromTrades(trades: NormalizedTrade[], warnings: string[] = [], targetSessionId?: string): StoredSession {
     cleanupExpired();
 
-    const sessionId = randomUUID();
+    const sessionId = targetSessionId ?? randomUUID();
     const withSessionId = trades.map((trade) => ({
       ...trade,
       sessionId,
