@@ -38,12 +38,12 @@ export function TraderDiscovery() {
       try {
         const response = await fetch(`/api/traders/similar?sessionId=${encodeURIComponent(activeSession.id)}`, { cache: "no-store" });
         const payload = (await response.json()) as SimilarResponse & { error?: string };
-        if (!response.ok) throw new Error(payload.error ?? "Failed to load similar traders.");
+        if (!response.ok) throw new Error(payload.error ?? t.errors.similarTradersFailed);
         setCurrent(payload.current);
         setTraders(payload.traders);
         setStorage(payload.storage);
       } catch (registryLoadError: unknown) {
-        setRegistryError(registryLoadError instanceof Error ? registryLoadError.message : "Failed to load similar traders.");
+        setRegistryError(registryLoadError instanceof Error ? registryLoadError.message : t.errors.similarTradersFailed);
       } finally {
         setRegistryLoading(false);
       }
@@ -76,8 +76,8 @@ export function TraderDiscovery() {
         title={t.traders.title}
         sub={t.traders.intro}
         scene={<TraderNetworkScene />}
-        sceneLabel="trader-network.loop"
-        sceneRight={traders.length > 0 ? `${traders.length} peers` : t.traders.privacyTag}
+        sceneLabel={t.traders.sceneLabel}
+        sceneRight={traders.length > 0 ? t.traders.peersLabel(traders.length) : t.traders.privacyTag}
         eyebrowTone="cyan"
       />
 

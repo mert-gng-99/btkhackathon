@@ -372,7 +372,9 @@ export const tr: Dictionary = {
         reflection: "Öz-değerlendirme soruları"
       },
       empty: "Öğe oluşturulamadı."
-    }
+    },
+    sceneLabel: "insight-radar.loop",
+    signalsLabel: (n: number) => `${n} sinyal`
   },
   aiCoach: {
     badge: "Gemini ajan grubu",
@@ -478,11 +480,14 @@ export const tr: Dictionary = {
     topSymbols: "Top semboller",
     behaviorTags: "Davranış etiketleri",
     follow: "Takip et",
-    following: "Takipte"
+    following: "Takipte",
+    sceneLabel: "trader-network.loop",
+    peersLabel: (n: number) => `${n} eş`
   },
   auth: {
     signIn: "Giriş yap",
     signOut: "Çıkış yap",
+    accountFallback: "Hesap",
     welcome: {
       title: "Tekrar hoş geldin",
       sub: "Sadece okuma yetkili Binance anahtarlarını bağlamak ve AI koçu açmak için giriş yap.",
@@ -496,6 +501,24 @@ export const tr: Dictionary = {
       loading: "Demo oturumu hazırlanıyor...",
       failed: "Demo başarısız. Tekrar dene."
     }
+  },
+  errors: {
+    unknownError: "Bir şeyler ters gitti.",
+    validationFailed: "Doğrulama başarısız.",
+    syncFailed: "Senkronizasyon başarısız.",
+    syncProgressRead: "Senkron ilerlemesi okunamadı.",
+    syncNoSession: "Senkron oturum oluşturmadan tamamlandı.",
+    demoFailed: "Demo başarısız.",
+    profileGenerationFailed: "Trader profili oluşturulamadı.",
+    profileRequestFailed: "Trader profili isteği başarısız.",
+    coachRequestFailed: "Koç isteği başarısız.",
+    pdfGenerationFailed: "PDF rapor oluşturma başarısız.",
+    similarTradersFailed: "Benzer trader'lar yüklenemedi."
+  },
+  a11y: {
+    mainNav: "Ana menü",
+    mobileNav: "Mobil menü",
+    menu: "Menü"
   },
   sessionGate: {
     loading: "Analizin yükleniyor...",

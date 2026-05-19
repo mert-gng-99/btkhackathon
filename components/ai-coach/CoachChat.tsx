@@ -121,7 +121,7 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
       try {
         const response = await fetch(`/api/insights/trader-profile?sessionId=${encodeURIComponent(sessionId)}`, { cache: "no-store" });
         const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error ?? "Trader profile request failed.");
+        if (!response.ok) throw new Error(payload.error ?? t.errors.profileRequestFailed);
         if (!cancelled) {
           setProfile(payload.profile);
           sessionStorage.setItem(
@@ -175,7 +175,7 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
         body: JSON.stringify({ sessionId, question: trimmed })
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error ?? "Coach request failed.");
+      if (!response.ok) throw new Error(payload.error ?? t.errors.coachRequestFailed);
 
       if (payload.answer?.traderProfile) {
         setProfile(payload.answer.traderProfile);
@@ -199,7 +199,7 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
       setAgentStatus(t.aiCoach.sidebar.completed(completed.length));
       setMessages((current) => [...current, { role: "assistant", content: payload.answer.answer, answer: payload.answer }]);
     } catch (chatError: unknown) {
-      setError(chatError instanceof Error ? chatError.message : "Coach request failed.");
+      setError(chatError instanceof Error ? chatError.message : t.errors.coachRequestFailed);
       setActiveAgents([]);
       setAgentStatus(null);
     } finally {
@@ -237,7 +237,7 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
 
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
-        throw new Error(payload?.error ?? "PDF report generation failed.");
+        throw new Error(payload?.error ?? t.errors.pdfGenerationFailed);
       }
 
       const blob = await response.blob();
@@ -252,7 +252,7 @@ export function CoachChat({ sessionId, analytics }: CoachChatProps) {
       setReportStep(REPORT_STEPS.length - 1);
       setReportMessage(t.aiCoach.chat.pdfDone);
     } catch (reportGenerationError: unknown) {
-      setReportError(reportGenerationError instanceof Error ? reportGenerationError.message : "PDF report generation failed.");
+      setReportError(reportGenerationError instanceof Error ? reportGenerationError.message : t.errors.pdfGenerationFailed);
     } finally {
       setReportLoading(false);
     }

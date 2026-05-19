@@ -25,8 +25,8 @@ export default function InsightsPage() {
         title={t.insights.title}
         sub={t.insights.intro}
         scene={<InsightRadarScene />}
-        sceneLabel="insight-radar.loop"
-        sceneRight={`${session.analytics.generatedInsights.length} signals`}
+        sceneLabel={t.insights.sceneLabel}
+        sceneRight={t.insights.signalsLabel(session.analytics.generatedInsights.length)}
       />
 
       <div data-reveal className="tl-reveal">

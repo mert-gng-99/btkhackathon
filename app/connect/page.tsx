@@ -90,12 +90,12 @@ export default function ConnectPage() {
         body: JSON.stringify({ apiKey, apiSecret })
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error ?? "Validation failed.");
+      if (!response.ok) throw new Error(payload.error ?? t.errors.validationFailed);
       if (!payload.validation.isReadOnly) throw new Error(payload.validation.blockers.join(" "));
       setWarnings(payload.validation.warnings ?? []);
       setStatus(t.connect.form.validated((payload.validation.permissions ?? []).join(", ")));
     } catch (validateError: unknown) {
-      setError(validateError instanceof Error ? validateError.message : "Validation failed.");
+      setError(validateError instanceof Error ? validateError.message : t.errors.validationFailed);
     } finally {
       setLoading(false);
     }
@@ -123,10 +123,10 @@ export default function ConnectPage() {
         })
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error ?? "Sync failed.");
+      if (!response.ok) throw new Error(payload.error ?? t.errors.syncFailed);
       await pollJob(payload.jobId);
     } catch (syncError: unknown) {
-      setError(syncError instanceof Error ? syncError.message : "Sync failed.");
+      setError(syncError instanceof Error ? syncError.message : t.errors.syncFailed);
     } finally {
       setLoading(false);
     }
@@ -137,16 +137,16 @@ export default function ConnectPage() {
       await new Promise((resolve) => setTimeout(resolve, 1200));
       const response = await fetch(`/api/binance/sync/jobs/${jobId}`, { cache: "no-store" });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error ?? "Could not read sync progress.");
+      if (!response.ok) throw new Error(payload.error ?? t.errors.syncProgressRead);
 
       const job = payload.job as SyncJob;
       setSyncJob(job);
       setWarnings(job.warnings ?? []);
       setStatus(job.progress.message);
 
-      if (job.status === "failed") throw new Error(job.error ?? "Sync failed.");
+      if (job.status === "failed") throw new Error(job.error ?? t.errors.syncFailed);
       if (job.status === "completed") {
-        if (!job.sessionId) throw new Error("Sync completed without a session.");
+        if (!job.sessionId) throw new Error(t.errors.syncNoSession);
         window.localStorage.setItem("tradeAnalyticsSessionId", job.sessionId);
         setApiSecret("");
         router.push("/dashboard");
@@ -163,11 +163,11 @@ export default function ConnectPage() {
     try {
       const response = await fetch("/api/demo/session", { method: "POST" });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error ?? "Demo failed.");
+      if (!response.ok) throw new Error(payload.error ?? t.errors.demoFailed);
       window.localStorage.setItem("tradeAnalyticsSessionId", payload.sessionId);
       router.push("/dashboard");
     } catch (demoError: unknown) {
-      setError(demoError instanceof Error ? demoError.message : "Demo failed.");
+      setError(demoError instanceof Error ? demoError.message : t.errors.demoFailed);
     } finally {
       setLoading(false);
     }

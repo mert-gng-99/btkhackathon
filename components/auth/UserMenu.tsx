@@ -30,7 +30,7 @@ export function UserMenu() {
     );
   }
 
-  const name = session.user.name ?? session.user.email ?? "Account";
+  const name = session.user.name ?? session.user.email ?? t.auth.accountFallback;
   const initial = (name?.[0] ?? "?").toUpperCase();
 
   return (

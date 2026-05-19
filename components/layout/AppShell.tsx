@@ -81,7 +81,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="tl-brand-meta">{dict.common.version}</span>
           </Link>
 
-          <nav className="tl-topnav" aria-label="Main">
+          <nav className="tl-topnav" aria-label={dict.a11y.mainNav}>
             {navOrder.map(({ href, key }) => {
               const Icon = navIcons[key];
               const active = pathname === href;
@@ -123,7 +123,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <button
               type="button"
               className="tl-mobile-menu-btn"
-              aria-label="Menu"
+              aria-label={dict.a11y.menu}
               aria-expanded={mobileOpen}
               onClick={() => setMobileOpen((v) => !v)}
             >
@@ -133,7 +133,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         {mobileOpen ? (
-          <nav className="tl-mobile-nav" aria-label="Mobile">
+          <nav className="tl-mobile-nav" aria-label={dict.a11y.mobileNav}>
             {navOrder.map(({ href, key }) => {
               const Icon = navIcons[key];
               const active = pathname === href;
