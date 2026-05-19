@@ -2,9 +2,9 @@ import type { Dictionary } from "./en";
 
 export const tr: Dictionary = {
   common: {
-    appName: "TradeLens",
+    appName: "2BMTRADE",
     version: "v0.4",
-    openApp: "TradeLens'i Aç",
+    openApp: "2BMTRADE'i Aç",
     home: "Anasayfa",
     backToHome: "Anasayfaya dön",
     loading: "Yükleniyor...",
@@ -48,7 +48,7 @@ export const tr: Dictionary = {
     hero: {
       eyebrow: "Sadece okuma · İşlem yok",
       title: ["Gerçekte nasıl", "işlem yaptığını gör."],
-      sub: "Sadece okuma yetkili bir Binance anahtarı bağla. TradeLens senin Spot ve Vadeli geçmişini net grafiklere ve akıllı bir AI koça çevirir.",
+      sub: "Sadece okuma yetkili bir Binance anahtarı bağla. 2BMTRADE senin Spot ve Vadeli geçmişini net grafiklere ve akıllı bir AI koça çevirir.",
       ctaPrimary: "İşlemlerimi analiz et",
       ctaSecondary: "60 saniyelik turu izle",
       trust: {
@@ -61,7 +61,7 @@ export const tr: Dictionary = {
     },
     intro: {
       whatItIs: "NE BU",
-      whatItIsBody: "Güvenli bir Binance işlem görüntüleyici. Sadece okuma anahtarını verirsin, TradeLens nasıl işlem yaptığını gösterir.",
+      whatItIsBody: "Güvenli bir Binance işlem görüntüleyici. Sadece okuma anahtarını verirsin, 2BMTRADE nasıl işlem yaptığını gösterir.",
       markets: "PİYASALAR",
       marketsBody: "Spot · USD-M · COIN-M",
       stack: "TEKNOLOJİ",
@@ -202,10 +202,10 @@ export const tr: Dictionary = {
       cta: {
         title: ["Sadece okuma anahtarını getir.", "Avantajını koru."],
         sub: "Spot · USD-M Vadeli · COIN-M Vadeli. Kurulum yok.",
-        button: "TradeLens'i Aç"
+        button: "2BMTRADE'i Aç"
       },
-      meta: "© 2026 TradeLens · v0.4 · Binance bağlı değildir",
-      links: { github: "GitHub", security: "security@tradelens.dev", disclosure: "Güvenlik bildirimi" }
+      meta: "© 2026 2BMTRADE · v0.4 · Binance bağlı değildir",
+      links: { github: "GitHub", security: "security@hackathon.mertgungor.me", disclosure: "Güvenlik bildirimi" }
     }
   },
   connect: {

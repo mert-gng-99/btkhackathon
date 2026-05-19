@@ -23,7 +23,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TradeLens — See how you really trade",
+  title: "2BMTRADE — See how you really trade",
   description:
     "Safe, read-only Binance trade view with a smart AI coach. Spot, USD-M Futures, and COIN-M Futures."
 };

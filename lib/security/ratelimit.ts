@@ -39,7 +39,7 @@ function makeLimiter(tokens: number, window: `${number} s` | `${number} m` | `${
       redis,
       limiter: Ratelimit.slidingWindow(tokens, window),
       analytics: true,
-      prefix: "tradelens",
+      prefix: "2bmtrade",
     });
   }
   const seconds = parseWindowSeconds(window);

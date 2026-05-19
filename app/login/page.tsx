@@ -3,7 +3,7 @@ import { auth, signIn } from "@/auth";
 import { redirect } from "next/navigation";
 
 export const metadata = {
-  title: "Sign in — TradeLens",
+  title: "Sign in — 2BMTRADE",
 };
 
 async function googleSignIn(formData: FormData) {

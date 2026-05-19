@@ -1,8 +1,8 @@
 export const en = {
   common: {
-    appName: "TradeLens",
+    appName: "2BMTRADE",
     version: "v0.4",
-    openApp: "Open TradeLens",
+    openApp: "Open 2BMTRADE",
     home: "Home",
     backToHome: "Back to home",
     loading: "Loading...",
@@ -47,7 +47,7 @@ export const en = {
     hero: {
       eyebrow: "Read-only · No trading",
       title: ["See how you", "really trade."],
-      sub: "Connect a read-only Binance key. TradeLens turns your Spot and Futures history into clear charts and a smart AI coach.",
+      sub: "Connect a read-only Binance key. 2BMTRADE turns your Spot and Futures history into clear charts and a smart AI coach.",
       ctaPrimary: "Analyze my trades",
       ctaSecondary: "Watch 60 second tour",
       trust: {
@@ -60,7 +60,7 @@ export const en = {
     },
     intro: {
       whatItIs: "WHAT IT IS",
-      whatItIsBody: "A safe Binance trade viewer. You bring a read-only key. TradeLens shows you how you trade.",
+      whatItIsBody: "A safe Binance trade viewer. You bring a read-only key. 2BMTRADE shows you how you trade.",
       markets: "MARKETS",
       marketsBody: "Spot · USD-M · COIN-M",
       stack: "STACK",
@@ -201,10 +201,10 @@ export const en = {
       cta: {
         title: ["Bring your read-only key.", "Keep your edge."],
         sub: "Spot · USD-M Futures · COIN-M Futures. Nothing to install.",
-        button: "Open TradeLens"
+        button: "Open 2BMTRADE"
       },
-      meta: "© 2026 TradeLens · v0.4 · not made by Binance",
-      links: { github: "GitHub", security: "security@tradelens.dev", disclosure: "Security disclosure" }
+      meta: "© 2026 2BMTRADE · v0.4 · not made by Binance",
+      links: { github: "GitHub", security: "security@hackathon.mertgungor.me", disclosure: "Security disclosure" }
     }
   },
   // ---- Connect page ----

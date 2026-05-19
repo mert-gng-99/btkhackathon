@@ -1,4 +1,4 @@
-# Binance Trade Analytics
+# 2BMTRADE
 
 A secure, read-only Binance trade analytics dashboard with an AI coach (Gemini), anonymous peer discovery, and risk insights. Built with Next.js 15, React 19, Prisma 6, Tailwind, and PostgreSQL.
 
