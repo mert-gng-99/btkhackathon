@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import { binanceSyncJobs } from "@/lib/jobs/binanceSyncJobs";
 
-// Must match the sync route's region so in-memory job state hits the same instance.
+// Pinned to fra1 because Binance blocks Vercel's default iad1 (US East).
 export const runtime = "nodejs";
 export const preferredRegion = "fra1";
+// Each poll advances one batch of symbol scans. Hobby caps at 60s; one
+// batch of 12 concurrent fetches finishes well inside that.
+export const maxDuration = 60;
 
 export async function GET(_request: Request, context: { params: Promise<{ jobId: string }> }) {
   const params = await context.params;
-  const job = binanceSyncJobs.get(params.jobId);
+  const job = await binanceSyncJobs.advance(params.jobId);
 
   if (!job) {
     return NextResponse.json({ error: "Sync job not found." }, { status: 404 });
