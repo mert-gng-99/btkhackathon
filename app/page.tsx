@@ -306,10 +306,10 @@ export default function ShowcasePage() {
         <section className="section tight" style={{ paddingTop: 80, paddingBottom: 40 }}>
           <div className="container">
             <div
+              className="intro-band"
               style={{
                 display: "grid",
-                gridTemplateColumns: "1.2fr 1fr 1fr 1fr",
-                gap: 32,
+                gap: 24,
                 alignItems: "end",
                 padding: "32px 0",
                 borderTop: "1px solid var(--line)",

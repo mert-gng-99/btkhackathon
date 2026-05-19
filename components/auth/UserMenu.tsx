@@ -3,9 +3,11 @@
 import { useSession, signIn, signOut } from "next-auth/react";
 import { LogIn, LogOut, User } from "lucide-react";
 import Image from "next/image";
+import { useT } from "@/lib/i18n";
 
 export function UserMenu() {
   const { data: session, status } = useSession();
+  const t = useT();
 
   if (status === "loading") {
     return (
@@ -18,10 +20,12 @@ export function UserMenu() {
       <button
         type="button"
         onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
-        className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-sm font-medium text-white/90 transition hover:bg-white/10"
+        className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-2.5 py-1.5 text-sm font-medium text-white/90 transition hover:bg-white/10 sm:px-3"
+        title={t.auth.signIn}
+        aria-label={t.auth.signIn}
       >
         <LogIn className="h-4 w-4" aria-hidden />
-        <span>Sign in</span>
+        <span className="hidden sm:inline">{t.auth.signIn}</span>
       </button>
     );
   }
@@ -52,10 +56,10 @@ export function UserMenu() {
         type="button"
         onClick={() => signOut({ callbackUrl: "/" })}
         className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-sm font-medium text-white/80 transition hover:bg-white/10"
-        title="Sign out"
+        title={t.auth.signOut}
       >
         <LogOut className="h-4 w-4" aria-hidden />
-        <span className="hidden sm:inline">Sign out</span>
+        <span className="hidden sm:inline">{t.auth.signOut}</span>
       </button>
     </div>
   );

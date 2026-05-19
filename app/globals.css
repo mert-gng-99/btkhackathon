@@ -6,8 +6,8 @@
 
 :root {
   color-scheme: dark;
-  --background: #060A14;
-  --foreground: #E7ECF3;
+  --background: var(--tl-bg-0);
+  --foreground: var(--tl-ink);
 }
 
 * {
@@ -17,10 +17,11 @@
 html {
   min-width: 320px;
   scroll-behavior: smooth;
+  overflow-x: clip;
 }
 
 body {
-  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   background: var(--background);
   color: var(--foreground);
@@ -37,7 +38,7 @@ select {
 }
 
 ::selection {
-  background: rgba(245, 181, 68, 0.35);
+  background: var(--tl-select-bg);
 }
 
 .numeric {

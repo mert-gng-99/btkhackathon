@@ -206,7 +206,7 @@ export default function ConnectPage() {
         ))}
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+      <section className="grid gap-6 md:gap-6 lg:grid-cols-[0.95fr_1.05fr]">
         <div className="flex flex-col gap-6">
           <Card>
             <CardHeader>

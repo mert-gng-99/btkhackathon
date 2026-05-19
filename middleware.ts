@@ -5,18 +5,27 @@ import { limiterForPath } from "./lib/security/ratelimit";
 
 const { auth } = NextAuth(authConfig);
 
-const PROTECTED_PREFIXES = ["/dashboard", "/insights", "/ai-coach", "/connect", "/trades", "/traders"];
+// Pages that require either a real auth session OR an active demo session cookie.
+const DEMO_OR_AUTH_PAGES = ["/dashboard", "/insights", "/ai-coach", "/trades"];
+// Pages that always require a real auth session (real Binance key, trader network).
+const AUTH_ONLY_PAGES = ["/connect", "/traders"];
 
 const PUBLIC_API_PREFIXES = ["/api/auth/", "/api/demo/"];
 
-const PROTECTED_API_PREFIXES = [
-  "/api/binance/",
+// APIs the demo flow must reach (read mock session, generate insights, coach, export).
+const DEMO_OR_AUTH_APIS = [
   "/api/ai-coach/",
   "/api/analytics/",
   "/api/export/",
   "/api/insights/",
+];
+// APIs that always require real auth (real Binance keys, trader network).
+const AUTH_ONLY_APIS = [
+  "/api/binance/",
   "/api/traders/",
 ];
+
+const DEMO_COOKIE = "tl_demo";
 
 function clientKey(req: Parameters<Parameters<typeof auth>[0]>[0]): string {
   const userId = req.auth?.user?.id;
@@ -29,18 +38,31 @@ function clientKey(req: Parameters<Parameters<typeof auth>[0]>[0]): string {
 export default auth(async (req) => {
   const { nextUrl } = req;
   const isAuthed = !!req.auth;
+  const hasDemoSession = !!req.cookies.get(DEMO_COOKIE)?.value;
   const path = nextUrl.pathname;
 
-  const isProtectedPage = PROTECTED_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`));
+  const matches = (prefixes: string[]) =>
+    prefixes.some((p) => path === p || path.startsWith(`${p}/`));
+
+  const isAuthOnlyPage = matches(AUTH_ONLY_PAGES);
+  const isDemoOrAuthPage = matches(DEMO_OR_AUTH_PAGES);
   const isPublicApi = PUBLIC_API_PREFIXES.some((p) => path.startsWith(p));
-  const isProtectedApi =
-    !isPublicApi && PROTECTED_API_PREFIXES.some((p) => path.startsWith(p));
+  const isAuthOnlyApi = !isPublicApi && AUTH_ONLY_APIS.some((p) => path.startsWith(p));
+  const isDemoOrAuthApi = !isPublicApi && DEMO_OR_AUTH_APIS.some((p) => path.startsWith(p));
 
   // Auth gating
-  if (isProtectedApi && !isAuthed) {
+  if (isAuthOnlyApi && !isAuthed) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (isProtectedPage && !isAuthed) {
+  if (isDemoOrAuthApi && !isAuthed && !hasDemoSession) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (isAuthOnlyPage && !isAuthed) {
+    const loginUrl = new URL("/login", nextUrl);
+    loginUrl.searchParams.set("callbackUrl", path);
+    return NextResponse.redirect(loginUrl);
+  }
+  if (isDemoOrAuthPage && !isAuthed && !hasDemoSession) {
     const loginUrl = new URL("/login", nextUrl);
     loginUrl.searchParams.set("callbackUrl", path);
     return NextResponse.redirect(loginUrl);

@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { BarChart3, BrainCircuit, ListFilter, LockKeyhole, Menu, ShieldCheck, UsersRound, X } from "lucide-react";
+import { BarChart3, BrainCircuit, ListFilter, LockKeyhole, Menu, Palette, ShieldCheck, UsersRound, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useTheme } from "@/lib/theme";
 import { UserMenu } from "@/components/auth/UserMenu";
 
 const navIcons = {
@@ -28,6 +29,7 @@ const navOrder: Array<{ href: string; key: keyof typeof navIcons }> = [
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { locale, toggleLocale, dict } = useI18n();
+  const { theme, cycleTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
@@ -93,6 +95,17 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="tl-top-actions">
+            <button
+              type="button"
+              className="tl-lang-toggle"
+              onClick={cycleTheme}
+              aria-label={dict.theme.toggleLabel}
+              title={`${dict.theme.toggleLabel}: ${theme === "sand" ? dict.theme.sand : dict.theme.cinematic}`}
+            >
+              <Palette className="h-3.5 w-3.5" aria-hidden="true" />
+              <span className="tl-lang-active">{theme === "sand" ? dict.theme.short.sand : dict.theme.short.cinematic}</span>
+            </button>
+
             <button
               type="button"
               className="tl-lang-toggle"

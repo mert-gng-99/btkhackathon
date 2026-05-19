@@ -17,7 +17,7 @@ export default function GlobalError({
   return (
     <html>
       <body>
-        <div style={{ padding: "2rem", fontFamily: "system-ui, sans-serif", color: "#e5e7eb", background: "#0a0a0a", minHeight: "100vh" }}>
+        <div style={{ padding: "2rem", fontFamily: "system-ui, sans-serif", color: "#e5e7eb", background: "#0a0a0a", minHeight: "100dvh" }}>
           <h1 style={{ fontSize: "1.5rem", fontWeight: 600 }}>Something went wrong</h1>
           <p style={{ marginTop: "0.5rem", color: "#a3a3a3" }}>
             An unexpected error occurred. The issue has been reported.

@@ -23,9 +23,28 @@
   font-family: var(--font-inter-tight), "Inter Tight", "Inter", ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   letter-spacing: -0.011em;
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
   scroll-behavior: smooth;
+}
+
+/* ===== Sand theme overrides for landing showcase ===== */
+html[data-theme="sand"] .app-showcase {
+  --bg0: #0e0e10;
+  --bg1: #161618;
+  --ink: #EDE6DA;
+  --ink-2: #A29A8E;
+  --ink-3: #6B655B;
+  --line: rgba(210, 196, 177, 0.08);
+  --line-strong: rgba(210, 196, 177, 0.16);
+  --amber: #D2C4B1;
+  --amber-soft: rgba(210, 196, 177, 0.12);
+  --cyan: #B5AE9F;
+  --cyan-soft: rgba(181, 174, 159, 0.12);
+  --red: #E6736F;
+  --green: #9FBE9B;
+  --panel: rgba(210, 196, 177, 0.025);
+  --panel-2: rgba(210, 196, 177, 0.05);
 }
 
 .app-showcase * {
@@ -1360,5 +1379,24 @@
   .app-showcase .stagger > * {
     opacity: 1;
     transform: none;
+  }
+}
+
+/* ===== Responsive intro band (4-column meta strip) ===== */
+.app-showcase .intro-band {
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 560px) {
+  .app-showcase .intro-band {
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+  }
+}
+
+@media (min-width: 960px) {
+  .app-showcase .intro-band {
+    grid-template-columns: 1.2fr 1fr 1fr 1fr;
+    gap: 32px;
   }
 }

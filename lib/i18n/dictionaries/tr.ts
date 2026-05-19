@@ -4,7 +4,7 @@ export const tr: Dictionary = {
   common: {
     appName: "2BMTRADE",
     version: "v0.4",
-    openApp: "2BMTRADE'i Aç",
+    openApp: "Başlat",
     home: "Anasayfa",
     backToHome: "Anasayfaya dön",
     loading: "Yükleniyor...",
@@ -27,6 +27,12 @@ export const tr: Dictionary = {
     english: "English",
     turkish: "Türkçe",
     short: { en: "EN", tr: "TR" }
+  },
+  theme: {
+    toggleLabel: "Tema",
+    cinematic: "Sinematik",
+    sand: "Kum",
+    short: { cinematic: "SİN", sand: "KUM" }
   },
   nav: {
     connect: "Bağlan",
@@ -202,7 +208,7 @@ export const tr: Dictionary = {
       cta: {
         title: ["Sadece okuma anahtarını getir.", "Avantajını koru."],
         sub: "Spot · USD-M Vadeli · COIN-M Vadeli. Kurulum yok.",
-        button: "2BMTRADE'i Aç"
+        button: "Başlat"
       },
       meta: "© 2026 2BMTRADE · v0.4 · Binance bağlı değildir",
       links: { github: "GitHub", security: "security@hackathon.mertgungor.me", disclosure: "Güvenlik bildirimi" }
@@ -419,7 +425,30 @@ export const tr: Dictionary = {
         "Doğrulayıcı ajan taslağı kontrol ediyor...",
         "Gerekirse doğrulayıcı düzeltmeleri uygulanıyor...",
         "Son PDF hazırlanıyor..."
-      ]
+      ],
+      reportFlow: {
+        title: "Kanıta dayalı raporun hazırlanıyor",
+        sub: "Beş adımlı bir hat. Doğrulayıcı adımı, PDF imzalanmadan önce her iddiayı senin işlem verinle çapraz kontrol eder.",
+        stages: [
+          { title: "Topla", sub: "Koç cevapları + alt ajan izleri" },
+          { title: "Taslak", sub: "Gemini rapor bölümlerini yazar" },
+          { title: "Doğrula", sub: "Her iddia senin verine karşı kontrol edilir" },
+          { title: "Düzelt", sub: "Doğrulayıcı düzeltmeleri uygulanır" },
+          { title: "Bitir", sub: "PDF imzalanır ve paketlenir" }
+        ],
+        validatorBadge: "DOĞRULAYICI",
+        scanLabel: "İddialar taranıyor",
+        claimVerified: "doğrulandı",
+        claimsCounter: (verified: number, total: number) => `${verified} / ${total} iddia doğrulandı`,
+        sampleClaims: [
+          "En çok BTCUSDT ücretleri · Ekim",
+          "Hızlı işlem grupları · 9 vuruş",
+          "Spot PnL tahmini · +1,284 USDT",
+          "Gece işlem oranı · %18",
+          "Sembol yoğunluğu · %62"
+        ],
+        done: "Doğrulandı. PDF hazır."
+      }
     }
   },
   traders: {
@@ -450,6 +479,23 @@ export const tr: Dictionary = {
     behaviorTags: "Davranış etiketleri",
     follow: "Takip et",
     following: "Takipte"
+  },
+  auth: {
+    signIn: "Giriş yap",
+    signOut: "Çıkış yap",
+    welcome: {
+      title: "Tekrar hoş geldin",
+      sub: "Sadece okuma yetkili Binance anahtarlarını bağlamak ve AI koçu açmak için giriş yap.",
+      continueWithGoogle: "Google ile devam et",
+      consent: "Giriş yaparak trader profilinin sadece anonim olarak paylaşılmasını kabul ediyorsun."
+    },
+    demo: {
+      divider: "veya",
+      tryDemo: "Demo veriyle dene",
+      tryDemoSub: "Giriş gerekmez. Yapay Binance geçmişi.",
+      loading: "Demo oturumu hazırlanıyor...",
+      failed: "Demo başarısız. Tekrar dene."
+    }
   },
   sessionGate: {
     loading: "Analizin yükleniyor...",

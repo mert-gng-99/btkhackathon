@@ -39,7 +39,7 @@ export function HourlyBehavior({ analytics }: { analytics: AnalyticsData }) {
   const scoredTradeCount = hourly.reduce((sum, point) => sum + point.pnlSamples, 0);
 
   return (
-    <section className="grid gap-5 xl:grid-cols-[1.35fr_0.65fr]">
+    <section className="grid gap-5 lg:grid-cols-[1.35fr_0.65fr]">
       <Card>
         <CardHeader>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }} className="md:flex-row md:items-center md:justify-between">
