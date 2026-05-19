@@ -88,6 +88,30 @@ export interface PnlEstimate {
   confidence: "none" | "low" | "medium" | "high";
 }
 
+export interface BehaviorPattern {
+  id: "revenge_trading" | "overtrading" | "fomo" | "averaging_down";
+  label: string;
+  score: number;
+  confidence: "low" | "medium" | "high";
+  severity: InsightSeverity;
+  evidence: string[];
+}
+
+export interface CoachToolTrace {
+  tool: string;
+  input: unknown;
+  outputSummary: string;
+}
+
+export interface WhatIfSimulationResult {
+  baselinePnl: number;
+  simulatedPnl: number;
+  delta: number;
+  skippedTrades: Array<Pick<EstimatedTradePnl, "tradeId" | "symbol" | "timestamp" | "pnl">>;
+  ignoredIds: string[];
+  confidence: "none" | "low" | "medium" | "high";
+}
+
 export interface GeneratedInsight {
   id: string;
   title: string;
@@ -128,6 +152,7 @@ export interface AnalyticsData {
   bestTrades: EstimatedTradePnl[];
   worstTrades: EstimatedTradePnl[];
   generatedInsights: GeneratedInsight[];
+  behaviorPatterns?: BehaviorPattern[];
 }
 
 export interface RagChunk {
@@ -172,7 +197,8 @@ export interface AiCoachAnswer {
   subAgentResults: CoachSubAgentResult[];
   traderProfile?: TraderProfile;
   disclaimer: string;
-  structuredVersion: "agentic-v1";
+  structuredVersion: "agentic-v1" | "agentic-tools-v1";
+  toolTrace?: CoachToolTrace[];
 }
 
 export interface AiReport {

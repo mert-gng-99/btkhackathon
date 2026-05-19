@@ -2,6 +2,7 @@
 
 import { Lightbulb } from "lucide-react";
 import { TraderProfileCard } from "@/components/insights/TraderProfileCard";
+import { TradingDnaRadar } from "@/components/insights/TradingDnaRadar";
 import { PageHero } from "@/components/layout/PageHero";
 import { InsightRadarScene } from "@/components/scenes/InsightRadarScene";
 import { SessionGate } from "@/components/session/SessionGate";
@@ -31,6 +32,10 @@ export default function InsightsPage() {
 
       <div data-reveal className="tl-reveal">
         <TraderProfileCard sessionId={session.id} />
+      </div>
+
+      <div data-reveal className="tl-reveal">
+        <TradingDnaRadar analytics={session.analytics} trades={session.trades} />
       </div>
 
       <section data-reveal className="tl-reveal grid gap-4 lg:grid-cols-2">

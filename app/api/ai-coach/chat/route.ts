@@ -46,7 +46,8 @@ export async function POST(request: Request) {
     parsed.data.question,
     session.analytics,
     [...session.chunks, ...indexedMaterials],
-    traderProfile
+    traderProfile,
+    session.trades
   );
 
   return NextResponse.json({ answer });

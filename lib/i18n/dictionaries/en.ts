@@ -377,7 +377,20 @@ export const en = {
       empty: "No items generated."
     },
     sceneLabel: "insight-radar.loop",
-    signalsLabel: (n: number) => `${n} signals`
+    signalsLabel: (n: number) => `${n} signals`,
+    dna: {
+      title: "Trading DNA",
+      subtitle: "Six behavioral axes from your own session.",
+      axes: {
+        revenge: "Revenge",
+        overtrading: "Overtrading",
+        fomo: "FOMO",
+        averaging: "Averaging Down",
+        timing: "Timing Risk",
+        feeDrag: "Fee Drag"
+      },
+      empty: "Not enough trade data yet."
+    }
   },
   // ---- AI Coach page ----
   aiCoach: {
@@ -454,7 +467,17 @@ export const en = {
           "Symbol concentration · 62%"
         ],
         done: "Verified. PDF ready."
-      }
+      },
+      whatIf: {
+        title: "What-if simulator",
+        skipWorst5: "Skip worst 5 trades",
+        baseline: "Current PnL",
+        simulated: "Without skipped",
+        delta: "Difference",
+        empty: "No worst trades available yet.",
+        loading: "Simulating…"
+      },
+      toolTrace: "Tools Coach used"
     }
   },
   // ---- Traders page ----

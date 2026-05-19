@@ -1,5 +1,6 @@
 import { formatNumber, formatPercent, round } from "@/lib/utils/numbers";
-import type { AnalyticsData, GeneratedInsight, NormalizedTrade } from "@/types";
+import { BehaviorPatternDetector } from "@/lib/analytics/BehaviorPatternDetector";
+import type { AnalyticsData, BehaviorPattern, GeneratedInsight, NormalizedTrade } from "@/types";
 
 function insight(input: Omit<GeneratedInsight, "id">): GeneratedInsight {
   return {
@@ -127,6 +128,15 @@ export class InsightGenerator {
       );
     }
 
+    const patterns = BehaviorPatternDetector.detect(analytics, trades);
+    const topPatterns = [...patterns].sort((a, b) => b.score - a.score).slice(0, 3);
+    for (const p of topPatterns) {
+      if (p.score < 0.3) continue;
+      if (p.id === "overtrading" && insights.some((i) => i.title.toLowerCase().includes("overtrading"))) continue;
+      if (p.id === "revenge_trading" && insights.some((i) => i.title.toLowerCase().includes("revenge"))) continue;
+      insights.push(this.behaviorPatternInsight(p));
+    }
+
     return insights.length > 0
       ? insights
       : [
@@ -138,6 +148,16 @@ export class InsightGenerator {
             evidence: [`Total trades analyzed: ${analytics.totalTrades}`]
           })
         ];
+  }
+
+  private static behaviorPatternInsight(p: BehaviorPattern): GeneratedInsight {
+    return insight({
+      title: p.label,
+      message: p.evidence.join(" "),
+      severity: p.severity,
+      category: "discipline",
+      evidence: p.evidence
+    });
   }
 
   private static countSymbolSwitches(trades: NormalizedTrade[]): number {
