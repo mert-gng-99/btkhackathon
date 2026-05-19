@@ -5,6 +5,33 @@ export interface GeminiGenerateOptions {
   responseMimeType?: "application/json" | "text/plain";
 }
 
+export interface GeminiToolDeclaration {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+}
+
+export interface GeminiToolCall {
+  name: string;
+  args: Record<string, unknown>;
+}
+
+export interface GeminiToolResult {
+  finalText: string;
+  trace: Array<{ tool: string; input: unknown; outputSummary: string }>;
+}
+
+interface GeminiPart {
+  text?: string;
+  functionCall?: { name: string; args?: Record<string, unknown> };
+  functionResponse?: { name: string; response: unknown };
+}
+
+interface GeminiContent {
+  role: "user" | "model" | "function";
+  parts: GeminiPart[];
+}
+
 export class GeminiService {
   private readonly apiKey = process.env.GEMINI_API_KEY;
   private readonly model = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
@@ -71,6 +98,93 @@ export class GeminiService {
     });
     return JSON.parse(extractJson(text)) as T;
   }
+
+  async generateWithTools(opts: {
+    systemInstruction: string;
+    prompt: string;
+    tools: GeminiToolDeclaration[];
+    executor: (call: GeminiToolCall) => Promise<unknown>;
+    summarize?: (call: GeminiToolCall, output: unknown) => string;
+    maxRounds?: number;
+    temperature?: number;
+  }): Promise<GeminiToolResult> {
+    if (!this.apiKey) {
+      throw new Error("GEMINI_API_KEY is not configured.");
+    }
+
+    const maxRounds = opts.maxRounds ?? 4;
+    const trace: Array<{ tool: string; input: unknown; outputSummary: string }> = [];
+
+    const contents: GeminiContent[] = [
+      { role: "user", parts: [{ text: opts.prompt }] }
+    ];
+
+    for (let round = 0; round < maxRounds; round += 1) {
+      const response = await fetch(`${this.baseUrl}/models/${this.model}:generateContent`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": this.apiKey
+        },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: opts.systemInstruction }] },
+          contents,
+          tools: [{ functionDeclarations: opts.tools }],
+          generationConfig: {
+            temperature: opts.temperature ?? 0.15
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: { message?: string } } | null;
+        throw new Error(body?.error?.message ?? `Gemini tool request failed with status ${response.status}`);
+      }
+
+      const payload = (await response.json()) as {
+        candidates?: Array<{ content?: { role?: string; parts?: GeminiPart[] } }>;
+      };
+
+      const candidate = payload.candidates?.[0];
+      const parts: GeminiPart[] = candidate?.content?.parts ?? [];
+      if (parts.length === 0) {
+        return { finalText: "", trace };
+      }
+
+      contents.push({ role: "model", parts });
+
+      const functionCallPart = parts.find((p) => p.functionCall);
+      if (!functionCallPart || !functionCallPart.functionCall) {
+        const finalText = parts
+          .map((part) => part.text ?? "")
+          .join("")
+          .trim();
+        return { finalText, trace };
+      }
+
+      const call: GeminiToolCall = {
+        name: functionCallPart.functionCall.name,
+        args: functionCallPart.functionCall.args ?? {}
+      };
+
+      let output: unknown;
+      try {
+        output = await opts.executor(call);
+      } catch (executorError) {
+        output = { error: executorError instanceof Error ? executorError.message : "tool execution failed" };
+      }
+
+      const summary = opts.summarize ? opts.summarize(call, output) : defaultSummary(call, output);
+      trace.push({ tool: call.name, input: call.args, outputSummary: summary });
+
+      contents.push({
+        role: "function",
+        parts: [{ functionResponse: { name: call.name, response: output as Record<string, unknown> } }]
+      });
+    }
+
+    return { finalText: "", trace };
+  }
 }
 
 function extractJson(text: string): string {
@@ -83,4 +197,14 @@ function extractJson(text: string): string {
   }
 
   return cleaned;
+}
+
+function defaultSummary(call: GeminiToolCall, output: unknown): string {
+  try {
+    const json = JSON.stringify(output);
+    const truncated = json.length > 240 ? `${json.slice(0, 240)}…` : json;
+    return `${call.name}(${JSON.stringify(call.args)}) → ${truncated}`;
+  } catch {
+    return `${call.name} → [unserializable output]`;
+  }
 }
