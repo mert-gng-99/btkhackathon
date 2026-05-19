@@ -134,7 +134,7 @@ export default function ConnectPage() {
 
   async function pollJob(jobId: string) {
     for (;;) {
-      await new Promise((resolve) => setTimeout(resolve, 1200));
+      await new Promise((resolve) => setTimeout(resolve, 600));
       const response = await fetch(`/api/binance/sync/jobs/${jobId}`, { cache: "no-store" });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? t.errors.syncProgressRead);
