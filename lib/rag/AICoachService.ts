@@ -2,12 +2,17 @@ import { COACH_DISCLAIMER } from "@/lib/rag/ragTypes";
 import { VectorStoreService } from "@/lib/rag/VectorStoreService";
 import { formatNumber, formatPercent } from "@/lib/utils/numbers";
 import { GeminiService } from "@/lib/ai/GeminiService";
+import { CoachToolService } from "@/lib/ai/CoachToolService";
+import { BehaviorPatternDetector } from "@/lib/analytics/BehaviorPatternDetector";
 import type {
   AiCoachAnswer,
   AiEvidence,
   AnalyticsData,
+  BehaviorPattern,
   CoachKeyFinding,
   CoachSubAgentResult,
+  CoachToolTrace,
+  NormalizedTrade,
   RagChunk,
   TraderProfile
 } from "@/types";
@@ -81,7 +86,8 @@ export class AICoachService {
     question: string,
     analytics: AnalyticsData,
     chunks: RagChunk[],
-    traderProfile?: TraderProfile
+    traderProfile?: TraderProfile,
+    trades: NormalizedTrade[] = []
   ): Promise<AiCoachAnswer> {
     const retrieved = this.vectorStore.retrieve(question, chunks, 8);
 
@@ -97,6 +103,27 @@ export class AICoachService {
         disclaimer: COACH_DISCLAIMER,
         structuredVersion: "agentic-v1"
       };
+    }
+
+    if (this.gemini.isConfigured()) {
+      try {
+        const toolResult = await this.runToolUsingPath(question, analytics, trades, retrieved, traderProfile);
+        if (toolResult && toolResult.finalText.trim().length > 0) {
+          return {
+            answer: toolResult.finalText,
+            keyFindings: this.keyFindingsFromTrace(toolResult.trace, analytics, traderProfile),
+            evidence: retrieved.slice(0, 5).map(evidenceFromChunk),
+            retrievedChunks: retrieved,
+            subAgentResults: [],
+            toolTrace: toolResult.trace,
+            traderProfile,
+            disclaimer: COACH_DISCLAIMER,
+            structuredVersion: "agentic-tools-v1"
+          };
+        }
+      } catch {
+        // fall through to existing sub-agent path
+      }
     }
 
     const plan = await this.planSubTasks(question, analytics, retrieved, traderProfile);
@@ -116,6 +143,151 @@ export class AICoachService {
       disclaimer: COACH_DISCLAIMER,
       structuredVersion: "agentic-v1"
     };
+  }
+
+  private async runToolUsingPath(
+    question: string,
+    analytics: AnalyticsData,
+    trades: NormalizedTrade[],
+    retrieved: RagChunk[],
+    traderProfile?: TraderProfile
+  ): Promise<{ finalText: string; trace: CoachToolTrace[] } | null> {
+    const toolService = new CoachToolService(analytics, trades);
+
+    const tools = [
+      {
+        name: "get_my_worst_trades",
+        description: "Return the worst trades by realized PnL from the user's session.",
+        parameters: {
+          type: "object",
+          properties: {
+            period: { type: "string", enum: ["7d", "30d", "all"] },
+            limit: { type: "integer", minimum: 1, maximum: 10 }
+          }
+        }
+      },
+      {
+        name: "simulate_what_if",
+        description: "Subtractively simulate what the realized PnL would be if certain trades were skipped.",
+        parameters: {
+          type: "object",
+          properties: {
+            skipTradeIds: { type: "array", items: { type: "string" } }
+          },
+          required: ["skipTradeIds"]
+        }
+      },
+      {
+        name: "detect_behavior_patterns",
+        description: "Detect revenge trading, overtrading, FOMO, and averaging-down patterns in the user's session.",
+        parameters: {
+          type: "object",
+          properties: {
+            focus: { type: "string", enum: ["revenge_trading", "overtrading", "fomo", "averaging_down", "all"] }
+          }
+        }
+      },
+      {
+        name: "risk_budget_today",
+        description: "Return behavioral (NOT financial) risk hygiene guidance for the current session.",
+        parameters: { type: "object", properties: {} }
+      }
+    ];
+
+    const executor = async (call: { name: string; args: Record<string, unknown> }): Promise<unknown> => {
+      switch (call.name) {
+        case "get_my_worst_trades":
+          return toolService.getMyWorstTrades(call.args as { period?: "7d" | "30d" | "all"; limit?: number });
+        case "simulate_what_if":
+          return toolService.simulateWhatIf({
+            skipTradeIds: ((call.args.skipTradeIds as string[]) ?? []).filter((id) => typeof id === "string")
+          });
+        case "detect_behavior_patterns":
+          return toolService.detectBehaviorPatterns(
+            call.args as { focus?: "revenge_trading" | "overtrading" | "fomo" | "averaging_down" | "all" }
+          );
+        case "risk_budget_today":
+          return toolService.riskBudgetToday();
+        default:
+          return { error: `unknown tool: ${call.name}` };
+      }
+    };
+
+    const systemInstruction = [
+      "You are the Gemini AI Trade Coach for a read-only Binance analytics dashboard.",
+      "Use the provided tools BEFORE answering when the user's question involves losses, worst trades, what-if simulations, revenge trading, overtrading, FOMO, averaging-down, risk budget, or behavioral patterns.",
+      "Never recommend buy, sell, hold, leverage, entries, exits, or specific assets.",
+      "Tool results are factual session data. Quote concrete numbers from them.",
+      "If a tool reports low confidence, say so in the answer."
+    ].join("\n");
+
+    const prompt = JSON.stringify(
+      {
+        question,
+        cachedTraderProfile: traderProfile ?? null,
+        retrievedContextRefs: retrieved.slice(0, 6).map((c) => c.sourceRef),
+        outputInstruction: "Plain text answer for the trader. Include 3-5 concrete data points."
+      },
+      null,
+      2
+    );
+
+    const { finalText, trace } = await this.gemini.generateWithTools({
+      systemInstruction,
+      prompt,
+      tools,
+      executor,
+      maxRounds: 4,
+      temperature: 0.15
+    });
+
+    return { finalText, trace };
+  }
+
+  private keyFindingsFromTrace(
+    trace: CoachToolTrace[],
+    analytics: AnalyticsData,
+    traderProfile?: TraderProfile
+  ): CoachKeyFinding[] {
+    const findings: CoachKeyFinding[] = [];
+
+    const patterns: BehaviorPattern[] = BehaviorPatternDetector.detect(analytics, []);
+    const sortedPatterns = [...patterns].sort((a, b) => b.score - a.score).slice(0, 3);
+    for (const p of sortedPatterns) {
+      if (p.score < 0.3) continue;
+      findings.push({
+        title: p.label,
+        detail: p.evidence.slice(0, 2).join(" "),
+        severity: p.severity,
+        evidenceRef: p.id
+      });
+    }
+
+    const hasWorstTradesCall = trace.some((t) => t.tool === "get_my_worst_trades");
+    if (hasWorstTradesCall && analytics.worstTrades.length > 0) {
+      const worst = analytics.worstTrades[0];
+      findings.push({
+        title: `Worst trade: ${worst.symbol}`,
+        detail: `pnl ${formatNumber(worst.pnl)} at ${worst.timestamp}`,
+        severity: "warning",
+        evidenceRef: worst.tradeId
+      });
+    }
+
+    if (analytics.pnlEstimate.confidence === "low" || analytics.pnlEstimate.confidence === "none") {
+      findings.push({
+        title: "PnL confidence is limited",
+        detail: `PnL estimate confidence is "${analytics.pnlEstimate.confidence}" — interpret performance claims with caution.`,
+        severity: "info",
+        evidenceRef: "pnl-estimate"
+      });
+    }
+
+    if (findings.length === 0) {
+      return this.defaultKeyFindings(analytics, traderProfile);
+    }
+
+    return findings.slice(0, 5);
   }
 
   private async planSubTasks(
