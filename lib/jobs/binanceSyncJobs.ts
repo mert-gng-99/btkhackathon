@@ -486,18 +486,95 @@ export const binanceSyncJobs = {
   },
 
   /**
-   * Process the next batch of queued symbols. Called on every poll. When the
-   * queue is empty, drain the trade buffer into a TradingSession and mark
-   * the job completed.
+   * Process queued symbols until either the queue is empty, the job is
+   * finalized, or the per-call time budget runs out. Each batch is
+   * ADVANCE_BATCH_SIZE concurrent Binance fetches. We keep looping inside
+   * the same request so we make full use of the 60s Hobby function budget
+   * instead of one batch per UI poll.
    */
   async advance(id: string): Promise<SyncJob | null> {
-    const meta = await storage.loadMeta(id);
+    const startedAt = Date.now();
+    const BUDGET_MS = 50_000; // leave a 10s safety margin below the 60s cap
+
+    let meta = await storage.loadMeta(id);
     if (!meta) return null;
     if (meta.status === "completed" || meta.status === "failed") return meta;
 
-    const remaining = await storage.queueSize(id);
-    if (remaining === 0) {
-      // Finalize
+    const creds = await storage.loadCreds(id);
+    const opts = await storage.loadOpts(id);
+    if (!creds || !opts) {
+      const failed = await patchMeta(id, {
+        status: "failed",
+        error: "Job credentials expired or unavailable.",
+        progress: { message: "Sync failed" }
+      });
+      return failed ?? meta;
+    }
+
+    const service = new BinanceService(creds.apiKey, creds.apiSecret);
+
+    let scanned = meta.progress.scannedSymbols;
+    let withTrades = meta.progress.symbolsWithTrades;
+    let tradesFound = meta.progress.tradesFound;
+    let lastMarket: MarketType | undefined = meta.progress.currentMarket;
+    let lastSymbol: string | undefined = meta.progress.currentSymbol;
+
+    while (Date.now() - startedAt < BUDGET_MS) {
+      const batch = await storage.dequeue(id, ADVANCE_BATCH_SIZE);
+      if (batch.length === 0) {
+        break;
+      }
+
+      const collectedTrades: NormalizedTrade[] = [];
+
+      await Promise.all(
+        batch.map(async ({ marketType, symbol }) => {
+          try {
+            const normalized = await fetchAndNormalize(service, id, marketType, symbol, {
+              startTime: opts.startTime,
+              endTime: opts.endTime
+            });
+            if (normalized.length > 0) {
+              collectedTrades.push(...normalized);
+              withTrades += 1;
+              tradesFound += normalized.length;
+            }
+            scanned += 1;
+            lastMarket = marketType;
+            lastSymbol = symbol;
+          } catch (error) {
+            const msg = error instanceof BinanceApiError ? error.message : safeErrorMessage(error);
+            await storage.pushWarning(id, `${labelMarket(marketType)} ${symbol}: ${msg}`);
+            scanned += 1;
+          }
+        })
+      );
+
+      if (collectedTrades.length > 0) {
+        await storage.pushTrades(id, collectedTrades);
+      }
+
+      // Persist progress after every batch so the UI sees forward motion
+      // even while this advance call keeps looping.
+      const warnings = await storage.loadWarnings(id);
+      meta =
+        (await patchMeta(id, {
+          warnings,
+          progress: {
+            currentMarket: lastMarket,
+            currentSymbol: lastSymbol,
+            scannedSymbols: scanned,
+            symbolsWithTrades: withTrades,
+            tradesFound,
+            message: `Scanning ${labelMarket(lastMarket ?? "spot")} ${lastSymbol ?? ""}. ${scanned}/${meta.progress.totalSymbols} scanned.`
+          }
+        })) ?? meta;
+    }
+
+    // If the queue is now empty (and was non-zero up top), finalize in this
+    // same call so the user sees `completed` on the very next poll.
+    const remainingAfter = await storage.queueSize(id);
+    if (remainingAfter === 0) {
       const trades = await storage.drainTrades(id);
       const warnings = await storage.loadWarnings(id);
       const session =
@@ -519,80 +596,7 @@ export const binanceSyncJobs = {
       return final ?? meta;
     }
 
-    const creds = await storage.loadCreds(id);
-    const opts = await storage.loadOpts(id);
-    if (!creds || !opts) {
-      const failed = await patchMeta(id, {
-        status: "failed",
-        error: "Job credentials expired or unavailable.",
-        progress: { message: "Sync failed" }
-      });
-      return failed ?? meta;
-    }
-
-    const batch = await storage.dequeue(id, ADVANCE_BATCH_SIZE);
-    if (batch.length === 0) {
-      // Race: queue became empty between size check and dequeue. Next poll
-      // will hit the finalize branch.
-      return meta;
-    }
-
-    const service = new BinanceService(creds.apiKey, creds.apiSecret);
-
-    let scanned = meta.progress.scannedSymbols;
-    let withTrades = meta.progress.symbolsWithTrades;
-    let tradesFound = meta.progress.tradesFound;
-    let lastMarket: MarketType | undefined = meta.progress.currentMarket;
-    let lastSymbol: string | undefined = meta.progress.currentSymbol;
-
-    const collectedTrades: NormalizedTrade[] = [];
-
-    await Promise.all(
-      batch.map(async ({ marketType, symbol }) => {
-        try {
-          const normalized = await fetchAndNormalize(service, id, marketType, symbol, {
-            startTime: opts.startTime,
-            endTime: opts.endTime
-          });
-          if (normalized.length > 0) {
-            collectedTrades.push(...normalized);
-            withTrades += 1;
-            tradesFound += normalized.length;
-          }
-          scanned += 1;
-          lastMarket = marketType;
-          lastSymbol = symbol;
-        } catch (error) {
-          const msg = error instanceof BinanceApiError ? error.message : safeErrorMessage(error);
-          await storage.pushWarning(id, `${labelMarket(marketType)} ${symbol}: ${msg}`);
-          scanned += 1;
-        }
-      })
-    );
-
-    if (collectedTrades.length > 0) {
-      await storage.pushTrades(id, collectedTrades);
-    }
-
-    const warnings = await storage.loadWarnings(id);
-    const remainingAfter = await storage.queueSize(id);
-
-    const updated = await patchMeta(id, {
-      warnings,
-      progress: {
-        currentMarket: lastMarket,
-        currentSymbol: lastSymbol,
-        scannedSymbols: scanned,
-        symbolsWithTrades: withTrades,
-        tradesFound,
-        message:
-          remainingAfter > 0
-            ? `Scanning ${labelMarket(lastMarket ?? "spot")} ${lastSymbol ?? ""}. ${scanned}/${meta.progress.totalSymbols} scanned.`
-            : `Wrapping up. ${scanned}/${meta.progress.totalSymbols} scanned.`
-      }
-    });
-
-    return updated ?? meta;
+    return meta;
   },
 
   async get(id: string): Promise<SyncJob | null> {
