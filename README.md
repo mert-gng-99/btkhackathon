@@ -1,8 +1,10 @@
 # 2BMTRADE
 
+**Canlı Site** [hackathon.mertgungor.me](https://hackathon.mertgungor.me)
+
 Binance üzerinde gerçekten nasıl işlem yaptığını sade ve kanıta dayalı şekilde gösteren, yapay zeka destekli işlem analitik panelidir. Salt okunur API bağlantısı ister, hiçbir zaman emir göndermez, çekim yapmaz, hesap ayarlarına dokunmaz.
 
-Canlı demo adresi [hackathon.mertgungor.me](https://hackathon.mertgungor.me)
+Tarayıcıdan doğrudan açıp deneyebilirsin. Kendi Binance hesabını bağlamak istemiyorsan sayfanın altındaki Demo veri butonu sentetik bir oturumla tüm ekranları açar.
 
 ## Çözdüğü Problem
 
