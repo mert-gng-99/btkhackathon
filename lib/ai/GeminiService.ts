@@ -41,12 +41,43 @@ export class GeminiService {
     return Boolean(this.apiKey);
   }
 
+  // Retry on 429 (rate limit) and 5xx with short backoff. Gemini sometimes
+  // suggests a retryDelay in the error body; we honor it up to 4s.
+  private async fetchWithBackoff(url: string, init: RequestInit, attempt = 0): Promise<Response> {
+    const response = await fetch(url, init);
+    if (response.ok) return response;
+    if (attempt >= 2) return response;
+    if (response.status !== 429 && response.status < 500) return response;
+
+    let waitMs = 800 * Math.pow(2, attempt);
+    if (response.status === 429) {
+      try {
+        const cloned = response.clone();
+        const body = (await cloned.json()) as {
+          error?: { details?: Array<{ "@type"?: string; retryDelay?: string }> };
+        };
+        const detail = body.error?.details?.find((d) => d.retryDelay);
+        if (detail?.retryDelay) {
+          const seconds = parseFloat(detail.retryDelay.replace("s", ""));
+          if (Number.isFinite(seconds) && seconds > 0) {
+            waitMs = Math.min(seconds * 1000, 4000);
+          }
+        }
+      } catch {
+        // ignore parse errors, use default backoff
+      }
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
+    return this.fetchWithBackoff(url, init, attempt + 1);
+  }
+
   async generateText(options: GeminiGenerateOptions): Promise<string> {
     if (!this.apiKey) {
       throw new Error("GEMINI_API_KEY is not configured.");
     }
 
-    const response = await fetch(`${this.baseUrl}/models/${this.model}:generateContent`, {
+    const response = await this.fetchWithBackoff(`${this.baseUrl}/models/${this.model}:generateContent`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -71,7 +102,12 @@ export class GeminiService {
 
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as { error?: { message?: string } } | null;
-      throw new Error(body?.error?.message ?? `Gemini request failed with status ${response.status}`);
+      const status = response.status;
+      const baseMsg = body?.error?.message ?? `Gemini request failed with status ${status}`;
+      if (status === 429) {
+        throw new Error(`Gemini API günlük free tier istek limitine yaklaştı, biraz bekleyip tekrar deneyin. (${baseMsg})`);
+      }
+      throw new Error(baseMsg);
     }
 
     const payload = (await response.json()) as {
@@ -120,7 +156,7 @@ export class GeminiService {
     ];
 
     for (let round = 0; round < maxRounds; round += 1) {
-      const response = await fetch(`${this.baseUrl}/models/${this.model}:generateContent`, {
+      const response = await this.fetchWithBackoff(`${this.baseUrl}/models/${this.model}:generateContent`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -138,7 +174,12 @@ export class GeminiService {
 
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { error?: { message?: string } } | null;
-        throw new Error(body?.error?.message ?? `Gemini tool request failed with status ${response.status}`);
+        const status = response.status;
+        const baseMsg = body?.error?.message ?? `Gemini tool request failed with status ${status}`;
+        if (status === 429) {
+          throw new Error(`Gemini API rate limit (${baseMsg})`);
+        }
+        throw new Error(baseMsg);
       }
 
       const payload = (await response.json()) as {

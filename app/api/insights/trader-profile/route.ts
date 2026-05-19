@@ -43,6 +43,17 @@ export async function GET(request: Request) {
       profile
     });
   } catch (error) {
+    // Common during demos when the Gemini free tier RPM is hit. If we already
+    // have a cached profile, serve it with a notice instead of returning 500.
+    if (session.traderProfile) {
+      return NextResponse.json({
+        configured: service.isConfigured(),
+        cached: true,
+        generatedAt: session.traderProfileGeneratedAt,
+        profile: session.traderProfile,
+        notice: "Gemini API şu an yoğun, mevcut profili gösteriyoruz. Birkaç dakika sonra yenileyebilirsiniz."
+      });
+    }
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Trader profile generation failed."
