@@ -59,16 +59,18 @@ function parseWindowSeconds(window: string): number {
 
 // Buckets tuned to protect cost / load hotspots:
 // - aiCoach: Gemini calls are billed per token, RAG context is large.
-// - binanceSync: each request can spawn a multi-symbol scan job.
+// - binanceSync: kicks off a multi-symbol scan job (heavy, rare).
+// - binanceSyncPoll: status polling for an in-progress job (frequent, cheap).
 // - traderWrite: registry mutation — bursty bot abuse risk.
 // - api: catch-all for read endpoints.
 // - signin: per-IP, blocks credential-stuffing / login spray.
 export const limiters = {
-  aiCoach: makeLimiter(10, "1 m"),
-  binanceSync: makeLimiter(3, "1 m"),
-  traderWrite: makeLimiter(20, "1 m"),
-  api: makeLimiter(60, "1 m"),
-  signin: makeLimiter(5, "1 m"),
+  aiCoach: makeLimiter(30, "1 m"),
+  binanceSync: makeLimiter(30, "1 m"),
+  binanceSyncPoll: makeLimiter(240, "1 m"),
+  traderWrite: makeLimiter(60, "1 m"),
+  api: makeLimiter(180, "1 m"),
+  signin: makeLimiter(10, "1 m"),
 } as const;
 
 export type LimiterKey = keyof typeof limiters;
@@ -76,6 +78,8 @@ export type LimiterKey = keyof typeof limiters;
 // Pick the right limiter for a given pathname.
 export function limiterForPath(pathname: string): { key: LimiterKey; limiter: (typeof limiters)[LimiterKey] } | null {
   if (pathname.startsWith("/api/ai-coach/")) return { key: "aiCoach", limiter: limiters.aiCoach };
+  // Job-status polling is a separate bucket (one job runs slowly while the UI polls every ~1-2s).
+  if (pathname.startsWith("/api/binance/sync/jobs/")) return { key: "binanceSyncPoll", limiter: limiters.binanceSyncPoll };
   if (pathname.startsWith("/api/binance/sync")) return { key: "binanceSync", limiter: limiters.binanceSync };
   if (pathname.startsWith("/api/traders/") && pathname !== "/api/traders/similar") {
     return { key: "traderWrite", limiter: limiters.traderWrite };
