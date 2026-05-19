@@ -10,12 +10,16 @@ coverage
 prisma/dev.db
 tsconfig.tsbuildinfo
 
-# Local dev artifacts (Ruflo, RAG, vector stores)
+# Local dev artifacts
 agentdb.rvf
 agentdb.rvf.lock
 ruvector.db
 *.rvf
 .ruflo/
+.sixth/
+
+# Internal planning notes
+docs/superpowers/
 
 # OS / editor
 .DS_Store

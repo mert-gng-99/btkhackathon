@@ -198,7 +198,6 @@ lib/
   i18n              Türkçe ve İngilizce sözlükler
 
 rag-materials       İşlem psikolojisi PDF kaynakları
-docs/superpowers    Tasarım kararları ve uygulama planları
 prisma              Şema ve migration
 ```
 
