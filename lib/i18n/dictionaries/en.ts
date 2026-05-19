@@ -2,7 +2,7 @@ export const en = {
   common: {
     appName: "2BMTRADE",
     version: "v0.4",
-    openApp: "Open 2BMTRADE",
+    openApp: "Launch 2BMTRADE",
     home: "Home",
     backToHome: "Back to home",
     loading: "Loading...",
@@ -201,7 +201,7 @@ export const en = {
       cta: {
         title: ["Bring your read-only key.", "Keep your edge."],
         sub: "Spot · USD-M Futures · COIN-M Futures. Nothing to install.",
-        button: "Open 2BMTRADE"
+        button: "Launch 2BMTRADE"
       },
       meta: "© 2026 2BMTRADE · v0.4 · not made by Binance",
       links: { github: "GitHub", security: "security@hackathon.mertgungor.me", disclosure: "Security disclosure" }
