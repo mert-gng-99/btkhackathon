@@ -374,7 +374,20 @@ export const tr: Dictionary = {
       empty: "Öğe oluşturulamadı."
     },
     sceneLabel: "insight-radar.loop",
-    signalsLabel: (n: number) => `${n} sinyal`
+    signalsLabel: (n: number) => `${n} sinyal`,
+    dna: {
+      title: "Trading DNA",
+      subtitle: "Senin oturumundan altı davranış ekseni.",
+      axes: {
+        revenge: "İntikam",
+        overtrading: "Aşırı işlem",
+        fomo: "FOMO",
+        averaging: "Ortalama düşürme",
+        timing: "Zamanlama riski",
+        feeDrag: "Komisyon yükü"
+      },
+      empty: "Henüz yeterli işlem verisi yok."
+    }
   },
   aiCoach: {
     badge: "Gemini ajan grubu",
@@ -450,7 +463,17 @@ export const tr: Dictionary = {
           "Sembol yoğunluğu · %62"
         ],
         done: "Doğrulandı. PDF hazır."
-      }
+      },
+      whatIf: {
+        title: "Ya yapmasaydım?",
+        skipWorst5: "En kötü 5 trade'i atla",
+        baseline: "Mevcut PnL",
+        simulated: "Atlandıktan sonra",
+        delta: "Fark",
+        empty: "Henüz analiz edilecek en kötü trade yok.",
+        loading: "Hesaplanıyor…"
+      },
+      toolTrace: "Koç'un kullandığı araçlar"
     }
   },
   traders: {
