@@ -133,7 +133,7 @@ export default function ShowcasePage() {
   }, []);
 
   return (
-    <div className="tradelens-showcase">
+    <div className="app-showcase">
       <div className="topbar">
         <div className="brand">
           <span className="brand-mark" />
@@ -663,7 +663,7 @@ export default function ShowcasePage() {
               <div>{t.footer.meta}</div>
               <div>
                 <a href="#gh">{t.footer.links.github}</a>
-                <a href="mailto:security@tradelens.dev">{t.footer.links.security}</a>
+                <a href="mailto:security@hackathon.mertgungor.me">{t.footer.links.security}</a>
                 <a href="#disclosure">{t.footer.links.disclosure}</a>
               </div>
             </div>

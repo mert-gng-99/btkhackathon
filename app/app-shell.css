@@ -1,7 +1,7 @@
 /* App-shell cinematic design language.
    Shares the same visual tokens as showcase.css but lives at the app level
    so every non-home page can use the same atoms without coupling to the
-   .tradelens-showcase scope. */
+   .app-showcase scope. */
 
 :root {
   --tl-bg-0: #060A14;
